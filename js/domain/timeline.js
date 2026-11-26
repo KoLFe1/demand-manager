@@ -21,6 +21,8 @@
 //   time_logged        new_value: segundos; meta: { entry_id, source }
 //   week_added / week_removed / week_carried   new_value: week_start; meta: { kind?, from_week?, to_week? }
 //   week_move_undone   "Desfazer" de mover/transferir: new_value = semana de volta; meta: { from_week, to_week }
+//   followed_up        cobrança feita: new_value = pessoa cobrada (texto) | null; old_value = "Cobrar em" anterior;
+//                      meta: { person, note?, next_date, role: 'waiting'|'owner' }
 //   deleted (projeto)  meta: { demand_ids } — demandas que a exclusão deixou sem projeto (restoreProject)
 
 import { categoryOf } from './statuses.js';
@@ -45,6 +47,7 @@ export const ACTIONS = Object.freeze({
   WEEK_REMOVED: 'week_removed',
   WEEK_CARRIED: 'week_carried',
   WEEK_UNDONE: 'week_move_undone',
+  FOLLOW_UP: 'followed_up',
 });
 
 /** Monta os valores de um evento (o id é gerado pelo banco local ao inserir). */

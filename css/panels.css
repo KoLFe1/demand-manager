@@ -851,6 +851,38 @@ button.en-title:focus-visible {
   gap: var(--sp-2);
 }
 
+/* atalhos de pessoas conhecidas ("Aguardando quem?") */
+.en-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+
+.en-person-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px var(--sp-2) 2px 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+
+.en-person-chip > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.en-person-chip:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
 /* ================================================================== painéis (.pn-) */
 
 .pn {
@@ -2038,4 +2070,12 @@ button.qc-chip:hover {
   .qc-hint {
     display: none;
   }
+}
+
+/* "Cobrar em" + "Cobrei agora" */
+.pn-followup {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
 }

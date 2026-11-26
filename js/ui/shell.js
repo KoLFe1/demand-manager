@@ -1330,7 +1330,7 @@ export function startShell(app, root) {
   const showVersionChange = (info) =>
     toast(info && info.newVersion == null
       ? 'Os dados locais foram apagados em outra aba. Recarregue para continuar.'
-      : 'Uma versão nova do app foi aberta em outra aba.', {
+      : 'Uma versão nova do app foi aberta em outra aba. Esta aba não salva mais as alterações — recarregue.', {
       id: 'version-change',
       duration: 0,
       tone: 'warn',

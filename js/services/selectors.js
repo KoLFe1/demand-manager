@@ -28,6 +28,7 @@ import { nextActions, prioritySuggestions } from '../domain/nextactions.js';
 import { demandProgress, projectProgress, taskFraction } from '../domain/progress.js';
 import { isCancelled, isClosed, isOpen, resolveStatuses, statusById } from '../domain/statuses.js';
 import { indexEvents } from '../domain/timeline.js';
+import { collectPeople, daysSince, followUpInfo, isFollowUpDue, isOtherOwner, lastFollowUp, personKey, personName, waitingSince } from '../domain/followup.js';
 import { TIMER, activeTimers, elapsedSeconds, summarize, timerState, totalsByTask } from '../domain/timetracking.js';
 import { activeWeekItems, planLoad, weekSections, weekSummary } from '../domain/weekplan.js';
 
@@ -918,6 +919,113 @@ export function createSelectors(app) {
         }
         return Object.freeze([...byKey.values()].sort(NAME_COLLATOR.compare));
       });
+    },
+
+    /**
+     * Pessoas conhecidas (responsáveis e "aguardando" de demandas e tarefas não excluídas), agrupadas sem
+     * diferenciar acentos/maiúsculas; a grafia exibida é a mais recente.
+     * @returns {ReadonlyArray<{ key: string, name: string, count: number, owner: number, waiting: number }>}
+     */
+    people() {
+      return memo('people', () => {
+        const entries = [];
+        for (const table of ['demands', 'tasks']) {
+          for (const row of store.all(table)) {
+            const at = String(row.updated_at || row.created_at || '');
+            if (personName(row.owner)) entries.push({ name: row.owner, at, role: 'owner' });
+            if (personName(row.waiting_on)) entries.push({ name: row.waiting_on, at, role: 'waiting' });
+          }
+        }
+        return deepFreeze(collectPeople(entries));
+      });
+    },
+
+    /**
+     * Quadro "Aguardando": itens abertos e visíveis agrupados por pessoa.
+     *   waiting — categoria 'waiting' (pessoa = waiting_on; vazio = "Sem pessoa definida");
+     *   others  — demais itens abertos cujo responsável é outra pessoa (owner ≠ 'owner.default').
+     * Cada item: { key, type, entity, code, person, since, waitingDays, followUp, lastFollowUpAt, lastFollowUpNote }.
+     * Grupos ordenados por cobranças vencidas, depois quantidade e nome; itens por "Cobrar em" e espera.
+     * @returns {{ waiting: Array, others: Array, waitingCount: number, othersCount: number, dueCount: number }}
+     */
+    waitingBoard() {
+      const day = today();
+      return memo(`waitingBoard|${day}`, () => {
+        const list = statuses();
+        const index = eventsIndex();
+        const now = nowIso();
+        const defaultOwner = setting('owner.default');
+        const waiting = new Map();
+        const others = new Map();
+        let dueCount = 0;
+        const add = (groups, name, item) => {
+          const key = personKey(name) || '';
+          let group = groups.get(key);
+          if (!group) groups.set(key, (group = { key, name: personName(name) || 'Sem pessoa definida', items: [], dueCount: 0, latest: '' }));
+          if (item.entity.updated_at && item.entity.updated_at >= group.latest && personName(name)) {
+            group.latest = item.entity.updated_at;
+            group.name = personName(name);
+          }
+          group.items.push(item);
+          if (item.due) group.dueCount += 1;
+        };
+        const visit = (type, rows) => {
+          for (const row of rows) {
+            if (!isOpen(row, list)) continue;
+            const category = statusById(list, row.status).category;
+            const inWaiting = category === 'waiting';
+            if (!inWaiting && !isOtherOwner(row.owner, defaultOwner)) continue;
+            const events = index.get(`${type}:${row.id}`) || EMPTY;
+            const since = waitingSince(row, events, { statuses: list, nowIso: now, mode: inWaiting ? 'waiting' : 'owner' });
+            const last = lastFollowUp(events);
+            const due = isFollowUpDue(row.follow_up_date, day);
+            if (due) dueCount += 1;
+            const person = personName(inWaiting ? row.waiting_on : row.owner);
+            const item = {
+              key: `${type}:${row.id}`,
+              type,
+              entity: row,
+              code: entityCode(type, row),
+              person,
+              since,
+              waitingDays: daysSince(since, day),
+              followUp: followUpInfo(row.follow_up_date, day),
+              due,
+              lastFollowUpAt: last ? last.at : null,
+              lastFollowUpNote: last && last.meta && typeof last.meta.note === 'string' ? last.meta.note : null,
+            };
+            add(inWaiting ? waiting : others, person, item);
+          }
+        };
+        visit('demand', sel.demands());
+        visit('task', sel.tasks());
+        const order = (groups) => {
+          const out = [...groups.values()].map(({ latest, ...g }) => {
+            g.items.sort((a, b) => {
+              const fa = a.entity.follow_up_date || '9999-99-99';
+              const fb = b.entity.follow_up_date || '9999-99-99';
+              return cmpText(fa, fb) || b.waitingDays - a.waitingDays || NAME_COLLATOR.compare(String(a.entity.name || ''), String(b.entity.name || ''));
+            });
+            return { ...g, count: g.items.length };
+          });
+          out.sort((a, b) => (a.key === '') - (b.key === '') || b.dueCount - a.dueCount || b.count - a.count || NAME_COLLATOR.compare(a.name, b.name));
+          return out;
+        };
+        const w = order(waiting);
+        const o = order(others);
+        return deepFreeze({
+          waiting: w,
+          others: o,
+          waitingCount: w.reduce((n, g) => n + g.count, 0),
+          othersCount: o.reduce((n, g) => n + g.count, 0),
+          dueCount,
+        });
+      });
+    },
+
+    /** @returns {number} cobranças vencidas ou para hoje (selo da tela "Aguardando") */
+    followUpDueCount() {
+      return sel.waitingBoard().dueCount;
     },
 
     /** @returns {ReadonlyArray<string>} categorias em uso nas demandas não excluídas */

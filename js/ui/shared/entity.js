@@ -23,6 +23,7 @@ import { cx, h } from '../../core/dom.js';
 import { formatDate } from '../../core/dates.js';
 import { plural, truncate } from '../../core/format.js';
 import { effectiveWeights, isCountable, weightWarningText } from '../../domain/progress.js';
+import { followUpInfo, isOtherOwner } from '../../domain/followup.js';
 import { firstOfCategory, isClosedCategory, isInFlightCategory, isOpenCategory } from '../../domain/statuses.js';
 import { TIMER, elapsedSeconds, estimateVsActual, formatDuration, timerState } from '../../domain/timetracking.js';
 import { button, durationInput, formatDurationText, iconButton, inlineEdit, textInput } from '../kit/controls.js';
@@ -299,6 +300,10 @@ export function askImpediment(app, type, id, category, anchor) {
           },
           class: 'en-reason-input',
         }),
+        category === 'waiting' ? peopleChips(app, (name) => {
+          text = name;
+          save(close);
+        }) : null,
         h(
           'div',
           { class: 'en-reason-actions' },
@@ -307,6 +312,32 @@ export function askImpediment(app, type, id, category, anchor) {
         ),
       ),
     { class: 'en-reason-popover', ariaLabel: question, width: 300 },
+  );
+}
+
+/** Máximo de pessoas sugeridas como atalho no "Aguardando quem?". */
+const PEOPLE_CHIPS_MAX = 8;
+
+/**
+ * Atalhos com as pessoas conhecidas (sel.people()) para preencher "Aguardando quem?" num clique.
+ * @param {object} app
+ * @param {(name: string) => void} onpick
+ * @returns {HTMLElement|null} null quando ainda não há pessoas conhecidas
+ */
+export function peopleChips(app, onpick) {
+  const people = typeof app.sel.people === 'function' ? app.sel.people().slice(0, PEOPLE_CHIPS_MAX) : [];
+  if (!people.length) return null;
+  return h(
+    'div',
+    { class: 'en-people', role: 'group', 'aria-label': 'Pessoas conhecidas' },
+    people.map((person) =>
+      h(
+        'button',
+        { type: 'button', class: 'en-person-chip', key: person.key, title: `Aguardando ${person.name}`, onclick: () => onpick(person.name) },
+        avatar(person.name, { size: 16 }),
+        h('span', null, person.name),
+      ),
+    ),
   );
 }
 
@@ -503,12 +534,28 @@ export const entityActions = Object.freeze({
       value: current,
       withReason: isDue && !!current,
       today: app.clock.today(),
-      title: isDue ? 'Prazo' : 'Início planejado',
+      title: isDue ? 'Prazo' : field === 'follow_up_date' ? 'Cobrar em' : 'Início planejado',
       clearLabel: isDue ? 'Sem prazo' : 'Sem data',
     });
     if (picked === null || (picked.value || null) === current) return null;
     if (isDue) return attempt(app, () => app.cmd.setDueDate(type, id, picked.value, picked.reason ? { reason: picked.reason } : undefined));
     return update(app, type, id, { [field]: picked.value });
+  },
+
+  /** "Cobrei agora": registra a cobrança e agenda a próxima (padrão: 3 dias úteis). */
+  logFollowUp(app, type, id, options) {
+    const row = attempt(app, () => app.cmd.logFollowUp(type, id, options));
+    if (!row) return null;
+    const next = row.follow_up_date;
+    notify(app, next ? `Cobrança registrada. Próxima cobrança: ${formatDate(next, 'short', app.clock.today())}` : 'Cobrança registrada', { tone: 'success' });
+    return row;
+  },
+
+  /** "Retomar": sai de "Aguardando terceiros" e volta ao status anterior à espera. */
+  resumeWaiting(app, type, id) {
+    const result = attempt(app, () => app.cmd.resumeWaiting(type, id));
+    if (result) surfaceOutcome(app, result, { type, id });
+    return result;
   },
 
   /**
@@ -918,6 +965,41 @@ export function dueControl(app, type, entity, { field = 'due_date', compact = fa
     icon('calendar', { size: 14, class: 'deadline-icon' }),
     h('span', { class: 'deadline-text tabular' }, formatDate(value, 'short', app.clock.today())),
   );
+}
+
+/**
+ * "Cobrar em": chip com a data (vermelho se vencida, âmbar se hoje) que abre o calendário.
+ * @param {object} app
+ * @param {'task'|'demand'} type
+ * @param {object} entity
+ * @param {{ compact?: boolean, placeholder?: string }} [options]
+ * @returns {HTMLElement}
+ */
+export function followUpControl(app, type, entity, { compact = false, placeholder = 'Sem data' } = {}) {
+  const onclick = (ev) => {
+    ev.stopPropagation();
+    if (entity) entityActions.pickDueDate(app, type, entity.id, ev.currentTarget, { field: 'follow_up_date' });
+  };
+  const value = entity ? entity.follow_up_date || null : null;
+  if (!value) return emptyDateButton(placeholder, entity ? onclick : null, compact);
+  const today = app.clock.today();
+  const info = followUpInfo(value, today);
+  const tone = info.tone === 'danger' ? 'deadline-danger' : info.tone === 'warn' ? 'deadline-warn' : 'deadline-muted';
+  return h(
+    'button',
+    { type: 'button', class: cx('deadline', tone, 'en-due', 'en-followup', compact && 'is-compact'), title: `Cobrar em ${formatDate(value, 'long')} — ${info.label}`, onclick, dataset: { state: info.state } },
+    icon('bell', { size: 14, class: 'deadline-icon' }),
+    h('span', { class: 'deadline-text tabular' }, formatDate(value, 'short', today)),
+  );
+}
+
+/** O painel deve mostrar "Cobrar em"? (aguardando terceiros, responsável é outra pessoa, ou já tem data) */
+export function showsFollowUp(app, entity) {
+  if (!entity) return false;
+  if (entity.follow_up_date) return true;
+  const category = categoryOfEntity(app, entity);
+  if (isClosedCategory(category)) return false;
+  return category === 'waiting' || isOtherOwner(entity.owner, app.settings.get('owner.default'));
 }
 
 /**

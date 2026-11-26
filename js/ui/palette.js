@@ -22,6 +22,7 @@ export const NAV_SHORTCUTS = Object.freeze({
   semana: 'g s',
   demandas: 'g l',
   kanban: 'g k',
+  aguardando: 'g a',
   calendario: 'g c',
   hierarquia: 'g h',
   backlog: 'g b',

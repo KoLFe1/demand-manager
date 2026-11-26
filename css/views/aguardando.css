@@ -1,0 +1,209 @@
+/* Demand Manager — estilos da visualização "Aguardando" (css/views/aguardando.css).
+ * Prefixo .v-agu / .v-aguardando; só variáveis de css/tokens.css (nenhuma cor literal).
+ *
+ *   .v-agu-head     descrição + resumo das cobranças
+ *   .v-agu-tabs     "Aguardando terceiros" / "Com outras pessoas"
+ *   .v-agu-group    cartão de uma pessoa: cabeçalho + linhas (.v-agu-row)
+ */
+
+.v-aguardando {
+  padding: var(--sp-5) var(--sp-6) var(--sp-8);
+}
+
+.v-agu-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.v-agu-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2) var(--sp-4);
+}
+
+.v-agu-lead {
+  flex: 1 1 320px;
+  min-width: 0;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+}
+
+.v-agu-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+/* ------------------------------------------------------------------ grupo (pessoa) */
+.v-agu-group {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+}
+
+.v-agu-group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+
+.v-agu-person {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v-agu-noone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-active);
+  color: var(--text-muted);
+}
+
+.v-agu-count {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.v-agu-due {
+  margin-left: auto;
+}
+
+/* ------------------------------------------------------------------ linha */
+.v-agu-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+  padding: var(--sp-2) var(--sp-4);
+  border-top: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.v-agu-row:first-child {
+  border-top: 0;
+}
+
+.v-agu-row:hover {
+  background: var(--bg-hover);
+}
+
+.v-agu-row.is-overdue {
+  box-shadow: inset 3px 0 0 var(--danger);
+}
+
+.v-agu-row.is-today {
+  box-shadow: inset 3px 0 0 var(--warning);
+}
+
+.v-agu-main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.v-agu-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.v-agu-title > .en-title {
+  min-width: 0;
+}
+
+.v-agu-kind {
+  flex-shrink: 0;
+}
+
+.v-agu-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--sp-3);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.v-agu-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.v-agu-meta > span > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v-agu-demand {
+  max-width: 260px;
+}
+
+.v-agu-last.is-none {
+  color: var(--text-faint);
+}
+
+.v-agu-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.v-agu-followup {
+  display: inline-flex;
+}
+
+/* ------------------------------------------------------------------ celular */
+@media (max-width: 640px) {
+  .v-aguardando {
+    padding: var(--sp-3) var(--sp-3) var(--sp-8);
+  }
+
+  .v-agu-tabs {
+    overflow-x: auto;
+  }
+
+  .v-agu-group-head,
+  .v-agu-row {
+    padding-right: var(--sp-3);
+    padding-left: var(--sp-3);
+  }
+
+  .v-agu-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .v-agu-actions {
+    flex-wrap: wrap;
+  }
+
+  .v-agu-demand {
+    max-width: 100%;
+  }
+}

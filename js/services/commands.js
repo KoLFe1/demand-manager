@@ -25,7 +25,8 @@ import { createdEvent, diffToEvents, statusEvent } from '../domain/history.js';
 import { DEFAULT_PRIORITY, PRIORITIES } from '../domain/priorities.js';
 import { demandProgress, isCountable } from '../domain/progress.js';
 import { categoryOf, firstOfCategory, isDone, isInFlightCategory, isOpen, isOpenCategory, resolveStatuses, transitionPatch } from '../domain/statuses.js';
-import { ACTIONS, makeEvent } from '../domain/timeline.js';
+import { ACTIONS, makeEvent, sortEvents } from '../domain/timeline.js';
+import { DEFAULT_FOLLOWUP_DAYS, isOtherOwner, nextFollowUpDate, personName, resumeStatusId } from '../domain/followup.js';
 import { compareManualOrder } from '../domain/filters.js';
 import { ENTRY_SOURCE, TIMER, ValidationError, findOverlaps, formatDuration, manualEntryValues, pausePatch, resumePatch, startValues, stopPatch, timerState } from '../domain/timetracking.js';
 import { WEEK_KIND, allWeekItems, carryOverPlan, kindForNewItem } from '../domain/weekplan.js';
@@ -96,6 +97,7 @@ const SETTING_RULES = Object.freeze({
   'capacity.hoursPerWeek': (v) => (typeof v === 'number' && Number.isFinite(v) && v > 0 && v <= 168 ? v : undefined),
   'deadline.soonDays': (v) => (Number.isInteger(v) && v >= 0 && v <= 60 ? v : undefined),
   'workflow.autoStartDemand': (v) => (typeof v === 'boolean' ? v : undefined),
+  'followup.defaultDays': (v) => (Number.isInteger(v) && v >= 0 && v <= 60 ? v : undefined),
   statuses: (v) => (v === null || (Array.isArray(v) && v.every((s) => s && typeof s === 'object' && typeof s.id === 'string' && s.id)) ? v : undefined),
   'suggestions.dismissed': (v) => (Array.isArray(v) && v.every((s) => typeof s === 'string') ? v : undefined),
 });
@@ -106,6 +108,7 @@ const SETTING_MESSAGES = Object.freeze({
   'capacity.hoursPerWeek': 'Informe as horas por semana: um número maior que 0 e até 168.',
   'deadline.soonDays': 'Informe um número inteiro de dias, de 0 a 60.',
   'workflow.autoStartDemand': 'Esta opção aceita apenas ligado ou desligado.',
+  'followup.defaultDays': 'Informe um número inteiro de dias úteis, de 0 a 60.',
   statuses: 'A personalização de status precisa ser uma lista de status com identificador.',
   'suggestions.dismissed': 'A lista de sugestões dispensadas é inválida.',
 });
@@ -1408,6 +1411,75 @@ export function createCommands(app) {
       if (type !== 'demand' && type !== 'task') fail('invalid_type', 'Só demandas e tarefas têm prazo.', { type });
       const row = requireRow(type, id);
       return applyFields(type, row, cleanInput(type, { due_date: date === undefined ? null : date }, 'setDueDate'), { reason });
+    }),
+
+    /**
+     * Registra uma cobrança feita ("Cobrei agora"): evento 'followed_up' no histórico e nova data "Cobrar em"
+     * (`nextDate` ou hoje + configuração 'followup.defaultDays' dias úteis, padrão 3).
+     * A pessoa cobrada é `waiting_on` (item aguardando terceiros) ou o responsável (item com outra pessoa).
+     * @param {'demand'|'task'} type
+     * @param {string} id
+     * @param {{ note?: string, nextDate?: string|null }} [options]
+     * @returns {object} entidade atualizada
+     */
+    logFollowUp: define('logFollowUp', (type, id, options) => {
+      if (type !== 'demand' && type !== 'task') fail('invalid_type', 'Só demandas e tarefas podem ser cobradas.', { type });
+      const opts = options || {};
+      const row = requireRow(type, id);
+      const list = statuses();
+      if (!isOpen(row, list)) fail('invalid_status', 'Este item já foi concluído ou cancelado: não há o que cobrar.', { type, id });
+      const note = opts.note === undefined ? null : textOrNull('note', opts.note);
+      const today = isoToDateStr(now) || app.clock.today();
+      let nextDate = opts.nextDate === undefined || opts.nextDate === null || opts.nextDate === '' ? null : dateOrNull('follow_up_date', opts.nextDate);
+      if (!nextDate) {
+        const setting = store.get('settings', 'followup.defaultDays');
+        const days = setting && Number.isInteger(setting.value) ? setting.value : DEFAULT_FOLLOWUP_DAYS;
+        nextDate = nextFollowUpDate(today, days);
+      }
+      const waiting = categoryOf(list, row.status) === 'waiting';
+      const defaultOwner = store.get('settings', 'owner.default');
+      const role = waiting ? 'waiting' : isOtherOwner(row.owner, defaultOwner ? defaultOwner.value : '') ? 'owner' : null;
+      const person = personName(role === 'waiting' ? row.waiting_on : role === 'owner' ? row.owner : row.waiting_on || row.owner) || null;
+      event(type, id, ACTIONS.FOLLOW_UP, {
+        oldValue: row.follow_up_date || null,
+        newValue: person,
+        meta: { person, note: note || undefined, next_date: nextDate, role: role || undefined },
+      });
+      if (sameValue(row.follow_up_date, nextDate)) return row;
+      const patch = { follow_up_date: nextDate };
+      const updated = store.update(ENTITY_TABLE[type], id, patch);
+      auditDiff(type, row, patch, { cause: 'followed_up' });
+      return updated;
+    }),
+
+    /**
+     * Define (ou limpa, com null) o "Cobrar em".
+     * @param {'demand'|'task'} type
+     * @param {string} id
+     * @param {string|null} date 'YYYY-MM-DD'
+     * @returns {object} entidade atualizada
+     */
+    setFollowUpDate: define('setFollowUpDate', (type, id, date) => {
+      if (type !== 'demand' && type !== 'task') fail('invalid_type', 'Só demandas e tarefas têm data de cobrança.', { type });
+      const row = requireRow(type, id);
+      return applyFields(type, row, cleanInput(type, { follow_up_date: date === undefined ? null : date }, 'setFollowUpDate'));
+    }),
+
+    /**
+     * "Retomar" um item que aguardava terceiros: volta ao status anterior à espera (pelo histórico) ou ao primeiro
+     * status em andamento; `waiting_on` é limpo pela própria troca de status.
+     * @param {'demand'|'task'} type
+     * @param {string} id
+     * @returns {object} mesmo formato de setStatus
+     */
+    resumeWaiting: define('resumeWaiting', (type, id) => {
+      if (type !== 'demand' && type !== 'task') fail('invalid_type', 'Só demandas e tarefas têm status.', { type });
+      const row = requireRow(type, id);
+      const list = statuses();
+      if (categoryOf(list, row.status) !== 'waiting') fail('invalid_status', 'Este item não está aguardando terceiros.', { type, id });
+      const events = sortEvents(store.byIndex('activity_log', 'entity_id', id).filter((e) => e.entity_type === type));
+      const target = resumeStatusId(row, events, { statuses: list, nowIso: now });
+      return absorb(changeStatus(type, row, target, { reason: 'Retomada' }));
     }),
 
     /**

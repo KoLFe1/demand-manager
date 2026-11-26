@@ -29,6 +29,7 @@ const CANONICAL = Object.freeze([
   { id: 'semana', title: 'Minha Semana', icon: 'calendar-week', section: 'main' },
   { id: 'demandas', title: 'Demandas', icon: 'list', section: 'main' },
   { id: 'kanban', title: 'Kanban', icon: 'kanban', section: 'main' },
+  { id: 'aguardando', title: 'Aguardando', icon: 'hourglass', section: 'main' },
   { id: 'calendario', title: 'Calendário', icon: 'calendar', section: 'views' },
   { id: 'hierarquia', title: 'Hierarquia', icon: 'tree', section: 'views' },
   { id: 'backlog', title: 'Backlog', icon: 'inbox', section: 'views' },

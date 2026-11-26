@@ -546,6 +546,17 @@ function describeWeek(event, c) {
   return entry('calendar-week', text, origin ? `Veio da semana de ${origin}` : null);
 }
 
+function describeFollowUp(event, c) {
+  const meta = metaOf(event);
+  const person = cleanText(meta.person) || cleanText(event.new_value);
+  const text = person ? `Cobrança feita a ${person}` : 'Cobrança feita';
+  const parts = [];
+  const note = cleanText(meta.note);
+  if (note) parts.push(excerpt(note));
+  if (isValidDateStr(meta.next_date)) parts.push(`Próxima cobrança: ${formatDay(meta.next_date, c.today)}`);
+  return entry('bell', text, parts.length ? parts.join(' · ') : null);
+}
+
 function describeUnknown(event, c) {
   // Ação desconhecida (versão mais nova do app em outro dispositivo): se houver campo e valores, mostra como alteração.
   const hasField = typeof event.field === 'string' && event.field.trim();
@@ -565,7 +576,7 @@ function describeUnknown(event, c) {
  *        aparece nas datas (sem ele, usa-se o dia do próprio evento — o relógio nunca é consultado).
  * @returns {{icon: string, text: string, detail: string|null, tone: 'default'|'success'|'warn'|'danger'|'muted'}}
  *          icon é um dos nomes: plus, check-circle, rotate-ccw, arrow-right, flag, calendar, file-text, pencil, link,
- *          unlink, archive, trash, undo, move, message, clock, calendar-week.
+ *          unlink, archive, trash, undo, move, message, clock, calendar-week, bell.
  *
  * Exemplos: 'Criada' · 'Concluída' (detail 'Em revisão → Concluída', tone success) · 'Reaberta' (warn) ·
  * 'Bloqueada' (detail = motivo) · 'Status: Em andamento → Em revisão' (detail = motivo) · 'Prazo definido: 20 nov' ·
@@ -624,6 +635,8 @@ export function describeEvent(event, ctx = {}) {
     case ACTIONS.WEEK_CARRIED:
     case ACTIONS.WEEK_UNDONE:
       return describeWeek(event, c);
+    case ACTIONS.FOLLOW_UP:
+      return describeFollowUp(event, c);
     default:
       return describeUnknown(event, c);
   }

@@ -35,6 +35,7 @@ import {
 import {
   actualStartField,
   archivedAlert,
+  followUpRow,
   historyTab,
   impedimentAlert,
   longTextField,
@@ -151,6 +152,7 @@ function detailsTab(app, demand) {
       propRow('Projeto', projectControl(app, demand)),
       propRow('Responsável', ownerControl(app, 'demand', demand)),
       propRow('Prazo', dueControl(app, 'demand', demand, { placeholder: 'Sem prazo' })),
+      followUpRow(app, 'demand', demand),
       propRow('Início planejado', dueControl(app, 'demand', demand, { field: 'planned_start', placeholder: 'Sem data' })),
       propRow('Início real', actualStartField(app, 'demand', demand)),
       propRow('Conclusão', h('span', { class: cx('pn-static tabular', !demand.completed_at && 'is-empty') }, demand.completed_at ? formatDateTime(demand.completed_at) : '—')),

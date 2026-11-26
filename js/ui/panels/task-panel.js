@@ -31,6 +31,7 @@ import {
   entityFlags,
   entityTitle,
   estimateControl,
+  followUpControl,
   handleError,
   liveElapsed,
   notify,
@@ -39,6 +40,7 @@ import {
   priorityControl,
   projectDot,
   quickAddRow,
+  showsFollowUp,
   statusControl,
   tagsControl,
   taskRow,
@@ -160,6 +162,27 @@ export function propRow(label, control, { full = false, hint, key } = {}) {
     { class: cx('pn-prop', full && 'is-full'), key: key || label },
     h('span', { class: 'pn-prop-label' }, label),
     h('div', { class: 'pn-prop-value' }, control, hint ? h('span', { class: 'pn-prop-hint' }, hint) : null),
+  );
+}
+
+/**
+ * Linha "Cobrar em" (follow_up_date) com o botão "Cobrei agora". Só aparece quando faz sentido: item aguardando
+ * terceiros, com responsável que é outra pessoa, ou que já tem data de cobrança.
+ * @returns {HTMLElement|null}
+ */
+export function followUpRow(app, type, entity) {
+  if (!showsFollowUp(app, entity)) return null;
+  return propRow(
+    'Cobrar em',
+    h(
+      'div',
+      { class: 'pn-followup' },
+      followUpControl(app, type, entity),
+      app.sel.isOpen(entity)
+        ? button({ label: 'Cobrei agora', icon: 'bell', size: 'sm', variant: 'ghost', class: 'pn-followup-log', onclick: () => entityActions.logFollowUp(app, type, entity.id) })
+        : null,
+    ),
+    { key: 'follow_up_date' },
   );
 }
 
@@ -622,6 +645,7 @@ function detailsGrid(app, task) {
     propRow('Prioridade', priorityControl(app, 'task', task, { showLabel: true })),
     propRow('Responsável', ownerControl(app, 'task', task)),
     propRow('Prazo', dueControl(app, 'task', task, { placeholder: 'Sem prazo' })),
+    followUpRow(app, 'task', task),
     propRow('Início planejado', dueControl(app, 'task', task, { field: 'planned_start', placeholder: 'Sem data' })),
     propRow('Início real', actualStartField(app, 'task', task)),
     propRow('Conclusão', h('span', { class: cx('pn-static tabular', !task.completed_at && 'is-empty') }, task.completed_at ? formatDateTime(task.completed_at) : '—')),
