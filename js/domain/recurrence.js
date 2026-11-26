@@ -127,6 +127,27 @@ export function nextOccurrence(rule, ctx = {}) {
 }
 
 /**
+ * Próximo prazo que não fica no passado: com basis 'due', avança a regra repetidamente (mantendo a cadência e,
+ * no mensal, o dia do mês) até a primeira ocorrência >= `today`. Ex.: semanal com prazo há 3 semanas concluída
+ * hoje → próxima nesta semana ou na seguinte. basis 'completion' já conta de hoje (igual a nextOccurrence).
+ * @param {object} rule regra (use carriedRecurrence para fixar o dia do mês)
+ * @param {{ dueDate?: string|null, completedDate?: string|null, today?: string|null, maxSteps?: number }} ctx
+ * @returns {string|null}
+ */
+export function nextOccurrenceFrom(rule, ctx = {}) {
+  const r = parseRecurrence(rule);
+  let next = nextOccurrence(r, ctx);
+  if (!r || !next || r.basis !== 'due' || !isValidDateStr(ctx.today)) return next;
+  const cap = Number.isInteger(ctx.maxSteps) && ctx.maxSteps > 0 ? ctx.maxSteps : 1000;
+  for (let i = 0; i < cap && next < ctx.today; i++) {
+    const after = nextOccurrence(r, { dueDate: next });
+    if (!after || after <= next) break;
+    next = after;
+  }
+  return next;
+}
+
+/**
  * Regra que a próxima ocorrência herda: no mensal a partir do prazo, fixa o dia original do mês (senão
  * 31/jan → 28/fev → 28/mar). Devolve a regra normalizada (ou null).
  */

@@ -15,37 +15,13 @@ import { icon } from '../kit/icons.js';
 import { promptDialog } from '../kit/overlays.js';
 import { handleError, notify } from '../shared/entity.js';
 import { section } from './task-panel.js';
+import { copyToClipboard } from '../kit/clipboard.js';
 
 export const COPY_HINT = 'Caminho copiado. No Windows: Win+E → Ctrl+L → Ctrl+V';
 
 const isCommandError = (err) => !!err && typeof err === 'object' && err.name === 'CommandError' && typeof err.code === 'string';
 
-/** Copia texto para a área de transferência (API moderna; senão, textarea + execCommand). */
-export async function copyToClipboard(text, win = globalThis) {
-  const nav = win.navigator;
-  if (nav && nav.clipboard && typeof nav.clipboard.writeText === 'function') {
-    try {
-      await nav.clipboard.writeText(text);
-      return true;
-    } catch {
-      // cai para o método antigo
-    }
-  }
-  try {
-    const doc = win.document;
-    const area = doc.createElement('textarea');
-    area.value = text;
-    area.setAttribute('readonly', '');
-    area.style.cssText = 'position:fixed;top:-1000px;left:-1000px;opacity:0';
-    doc.body.appendChild(area);
-    area.select();
-    const ok = doc.execCommand('copy');
-    area.remove();
-    return !!ok;
-  } catch {
-    return false;
-  }
-}
+export { copyToClipboard }; // mantido para quem importava daqui
 
 async function copyLink(app, info) {
   const ok = await copyToClipboard(info.copyText);

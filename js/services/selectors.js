@@ -24,6 +24,7 @@ import { deadlineInfo, dueBuckets as bucketsOf } from '../domain/deadlines.js';
 import { blockingPrereqs, buildGraph, downstreamCount, findCycles, isBlockedByDependency, scheduleConflicts } from '../domain/dependencies.js';
 import { compareManualOrder, normalizeText } from '../domain/filters.js';
 import { computeMetrics } from '../domain/metrics.js';
+import { buildStatusReport } from '../domain/report.js';
 import { nextActions, prioritySuggestions } from '../domain/nextactions.js';
 import { demandProgress, projectProgress, taskFraction } from '../domain/progress.js';
 import { isCancelled, isClosed, isOpen, resolveStatuses, statusById } from '../domain/statuses.js';
@@ -1261,6 +1262,35 @@ export function createSelectors(app) {
       if (metricsCache.size >= METRICS_CACHE_SIZE) metricsCache.delete(metricsCache.keys().next().value);
       metricsCache.set(key, result);
       return result;
+    },
+
+    // ----- relatório de status --------------------------------------------------------------------
+    /**
+     * Relatório de status (buildStatusReport do domínio) — memorizado por versão do banco, dia, período e projeto.
+     * @param {{ range?: {from: string, to: string}, projectId?: string|null }} [options]
+     * @returns {object}
+     */
+    statusReport(options) {
+      const { range, projectId } = options || {};
+      const day = today();
+      const r = range && isValidDateStr(range.from) && isValidDateStr(range.to) ? `${range.from}|${range.to}` : '';
+      const pid = projectId === undefined || projectId === null ? '*' : String(projectId);
+      return memo(`statusReport|${day}|${r}|${pid}`, () =>
+        deepFreeze(
+          buildStatusReport({
+            range: r ? { from: range.from, to: range.to } : null,
+            projectId: pid === '*' ? null : pid,
+            demands: sel.demands(),
+            tasks: sel.tasks(),
+            projects: sel.projects(),
+            eventsIndex: eventsIndex(),
+            statuses: statuses(),
+            weekItems: store.all('week_items'),
+            today: day,
+            nowIso: nowIso(),
+          }),
+        ),
+      );
     },
 
     // ----- busca ----------------------------------------------------------------------------------

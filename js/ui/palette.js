@@ -31,6 +31,7 @@ export const NAV_SHORTCUTS = Object.freeze({
   cronograma: 'g o',
   tempo: 'g t',
   metricas: 'g m',
+  relatorio: 'g r',
 });
 
 /**

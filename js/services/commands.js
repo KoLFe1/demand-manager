@@ -33,7 +33,7 @@ import { WEEK_KIND, allWeekItems, carryOverPlan, kindForNewItem } from '../domai
 import { MAX_TEMPLATES, TemplateError, availableTemplates, isBuiltinTemplate, normalizeTemplate, normalizeTemplateList, planTemplate } from '../domain/templates.js';
 import { classifyTarget, compareLinks } from '../domain/links.js';
 import { derivedUuid, uuid } from '../core/ids.js';
-import { RecurrenceError, carriedRecurrence, nextOccurrence, normalizeRecurrence, occurrenceBase } from '../domain/recurrence.js';
+import { RecurrenceError, carriedRecurrence, nextOccurrenceFrom, normalizeRecurrence, occurrenceBase } from '../domain/recurrence.js';
 
 /**
  * Erro de regra de negócio de um comando. `message` está em pt-BR e pode ser mostrada ao usuário.
@@ -638,7 +638,8 @@ export function createCommands(app) {
     const rule = carriedRecurrence(task.recurrence, { dueDate: task.due_date, completedDate: isoToDateStr(now) });
     if (!rule) return null;
     const ctx = { dueDate: task.due_date, completedDate: isoToDateStr(now) };
-    const dueDate = nextOccurrence(rule, ctx);
+    // basis 'due': avança até a 1ª ocorrência >= hoje (tarefa atrasada não gera próxima já vencida).
+    const dueDate = nextOccurrenceFrom(rule, { ...ctx, today: isoToDateStr(now) });
     if (!dueDate) return null;
     const id = derivedUuid(task.id, dueDate);
     if (store.get('tasks', id)) return null;

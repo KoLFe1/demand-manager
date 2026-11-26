@@ -1,0 +1,264 @@
+/* Demand Manager — estilos da visualização "Relatório" (css/views/relatorio.css).
+ * Prefixo .v-rel / .v-relatorio; só variáveis de css/tokens.css (nenhuma cor literal, exceto na impressão,
+ * que é sempre preto no branco).
+ *
+ *   .v-rel-toolbar   período, projeto e ações (não sai na impressão)
+ *   .v-rel-doc       o documento: cabeçalho, resumo, um bloco por projeto, seções com marcadores
+ *   @media print     só quando a tela montada é o relatório (body:has(.v-relatorio)): esconde a casca
+ */
+
+.v-relatorio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-6) var(--sp-8);
+  min-width: 0;
+}
+
+.v-relatorio.is-mobile {
+  padding: var(--sp-3) var(--sp-3) var(--sp-6);
+  gap: var(--sp-3);
+}
+
+.v-rel-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+}
+
+.v-rel-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.v-rel-sep {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.v-rel-project-btn {
+  max-width: 260px;
+}
+
+.v-rel-spacer {
+  flex: 1 1 auto;
+}
+
+.v-rel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.v-rel-mail {
+  text-decoration: none;
+}
+
+/* --- documento ------------------------------------------------------------------------------------- */
+.v-rel-doc {
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: var(--sp-6) var(--sp-8);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-sm);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.is-mobile .v-rel-doc {
+  padding: var(--sp-4);
+}
+
+.v-rel-head {
+  padding-bottom: var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.v-rel-title {
+  margin: 0;
+  font-size: var(--fs-2xl);
+  font-weight: 650;
+}
+
+.v-rel-meta {
+  margin: var(--sp-1) 0 0;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.v-rel-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+  margin: var(--sp-3) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.v-rel-stat strong {
+  color: var(--text);
+  font-size: var(--fs-md);
+}
+
+.v-rel-stat.is-blocked strong {
+  color: var(--warning);
+}
+
+.v-rel-stat.is-risks strong {
+  color: var(--danger);
+}
+
+.v-rel-project {
+  margin-top: var(--sp-5);
+}
+
+.v-rel-project-title {
+  margin: 0 0 var(--sp-2);
+  padding-bottom: var(--sp-1);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-lg);
+  font-weight: 650;
+}
+
+.v-rel-section {
+  margin-top: var(--sp-3);
+}
+
+.v-rel-section-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+
+.v-rel-section.is-risks .v-rel-section-title {
+  color: var(--danger);
+}
+
+.v-rel-count {
+  font-weight: 500;
+  color: var(--text-faint);
+}
+
+.v-rel-list {
+  margin: 0;
+  padding: 0 0 0 var(--sp-5);
+  list-style: disc;
+}
+
+.v-rel-item {
+  padding: 2px 0;
+  font-size: var(--fs-md);
+  overflow-wrap: anywhere;
+}
+
+.v-rel-item-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.v-rel-item-link:hover .v-rel-name,
+.v-rel-item-link:focus-visible .v-rel-name {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.v-rel-code {
+  margin-right: var(--sp-1);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.v-rel-name {
+  font-weight: 550;
+}
+
+.v-rel-demand,
+.v-rel-detail {
+  color: var(--text-muted);
+}
+
+.v-rel-empty {
+  margin-top: var(--sp-5);
+}
+
+/* --- impressão: só com o relatório montado ------------------------------------------------------------ */
+@media print {
+  html:has(.v-relatorio),
+  body:has(.v-relatorio) {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  body:has(.v-relatorio) .shell-sidebar,
+  body:has(.v-relatorio) .shell-topbar,
+  body:has(.v-relatorio) .shell-tabbar,
+  body:has(.v-relatorio) .shell-panel,
+  body:has(.v-relatorio) .shell-backdrop,
+  body:has(.v-relatorio) .toast-stack,
+  body:has(.v-relatorio) .v-rel-toolbar {
+    display: none !important;
+  }
+
+  body:has(.v-relatorio) .shell,
+  body:has(.v-relatorio) .shell-main,
+  body:has(.v-relatorio) .shell-content,
+  body:has(.v-relatorio) .shell-view {
+    display: block !important;
+    position: static !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  .v-relatorio {
+    padding: 0 !important;
+  }
+
+  .v-rel-doc {
+    max-width: none;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: #fff;
+    color: #000;
+  }
+
+  .v-rel-doc *,
+  .v-rel-section.is-risks .v-rel-section-title,
+  .v-rel-stat strong {
+    color: #000 !important;
+  }
+
+  .v-rel-head,
+  .v-rel-project-title {
+    border-color: #999;
+  }
+
+  .v-rel-project-title,
+  .v-rel-section-title {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .v-rel-item,
+  .v-rel-head {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
