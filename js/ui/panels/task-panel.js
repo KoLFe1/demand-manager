@@ -14,11 +14,12 @@ import { plural } from '../../core/format.js';
 import { validateNewDependency } from '../../domain/dependencies.js';
 import { describeEvent, groupByDay } from '../../domain/history.js';
 import { isCountable } from '../../domain/progress.js';
+import { RECURRENCE_OPTIONS, describeRecurrence, parseRecurrence } from '../../domain/recurrence.js';
 import { isClosedCategory } from '../../domain/statuses.js';
 import { ACTIONS } from '../../domain/timeline.js';
 import { TIMER, elapsedSeconds, estimateVsActual, formatDuration, timerState } from '../../domain/timetracking.js';
 import { badge, alertBox, emptyState, progressBar, statusBadge } from '../kit/display.js';
-import { button, formatDurationText, iconButton, inlineEdit, numberInput, parseDurationText, switchInput, tabs, textArea } from '../kit/controls.js';
+import { button, formatDurationText, iconButton, inlineEdit, numberInput, parseDurationText, segmented, selectInput, switchInput, tabs, textArea } from '../kit/controls.js';
 import { sortableItem, sortableList } from '../kit/dnd.js';
 import { icon } from '../kit/icons.js';
 import { confirmDialog, isMobileViewport } from '../kit/overlays.js';
@@ -637,6 +638,50 @@ function trackedField(app, task) {
   );
 }
 
+/** Regra de repetição a gravar: mensal a partir do prazo fixa o dia do mês do prazo atual (ex.: 31). */
+function recurrenceRule(task, freq, basis) {
+  if (!freq) return null;
+  const rule = { freq, basis };
+  if (freq === 'monthly' && basis === 'due' && typeof task.due_date === 'string' && task.due_date.length === 10) rule.dayOfMonth = Number(task.due_date.slice(8, 10));
+  return rule;
+}
+
+/** Linha "Repetir": frequência + "a partir do prazo / da conclusão". */
+function recurrenceRow(app, task) {
+  const rule = parseRecurrence(task.recurrence);
+  const freq = rule ? rule.freq : '';
+  const basis = rule ? rule.basis : 'due';
+  return propRow(
+    'Repetir',
+    h(
+      'div',
+      { class: 'pn-recurrence', 'data-recurrence': freq || 'none' },
+      selectInput({
+        value: freq,
+        size: 'sm',
+        ariaLabel: 'Repetir',
+        class: 'pn-recurrence-freq',
+        options: RECURRENCE_OPTIONS.map((o) => ({ value: o.id, label: o.label })),
+        onchange: (value) => saveFields(app, 'task', task.id, { recurrence: recurrenceRule(task, value, basis) }),
+      }),
+      rule
+        ? segmented({
+            size: 'sm',
+            ariaLabel: 'Contar a repetição',
+            class: 'pn-recurrence-basis',
+            value: basis,
+            options: [
+              { value: 'due', label: 'a partir do prazo' },
+              { value: 'completion', label: 'a partir da conclusão' },
+            ],
+            onchange: (value) => saveFields(app, 'task', task.id, { recurrence: recurrenceRule(task, freq, value) }),
+          })
+        : null,
+    ),
+    { key: 'recurrence', hint: rule ? describeRecurrence(rule) : null },
+  );
+}
+
 function detailsGrid(app, task) {
   const weight = effectiveWeightOf(app, task);
   return h(
@@ -647,6 +692,7 @@ function detailsGrid(app, task) {
     propRow('Responsável', ownerControl(app, 'task', task)),
     propRow('Prazo', dueControl(app, 'task', task, { placeholder: 'Sem prazo' })),
     followUpRow(app, 'task', task),
+    recurrenceRow(app, task),
     propRow('Início planejado', dueControl(app, 'task', task, { field: 'planned_start', placeholder: 'Sem data' })),
     propRow('Início real', actualStartField(app, 'task', task)),
     propRow('Conclusão', h('span', { class: cx('pn-static tabular', !task.completed_at && 'is-empty') }, task.completed_at ? formatDateTime(task.completed_at) : '—')),

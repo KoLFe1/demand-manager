@@ -2208,6 +2208,14 @@ button.qc-chip:hover {
   gap: var(--sp-2);
 }
 
+/* "Repetir" (tarefas recorrentes) */
+.pn-recurrence {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
 /* ---- Nova demanda a partir de modelo (js/ui/templates.js) ---- */
 .tpl-form {
   display: flex;

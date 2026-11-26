@@ -24,6 +24,7 @@ import { formatDate } from '../../core/dates.js';
 import { plural, truncate } from '../../core/format.js';
 import { effectiveWeights, isCountable, weightWarningText } from '../../domain/progress.js';
 import { followUpInfo, isOtherOwner } from '../../domain/followup.js';
+import { describeRecurrence } from '../../domain/recurrence.js';
 import { firstOfCategory, isClosedCategory, isInFlightCategory, isOpenCategory } from '../../domain/statuses.js';
 import { TIMER, elapsedSeconds, estimateVsActual, formatDuration, timerState } from '../../domain/timetracking.js';
 import { button, durationInput, formatDurationText, iconButton, inlineEdit, textInput } from '../kit/controls.js';
@@ -238,6 +239,16 @@ export function surfaceOutcome(app, outcome, context = {}) {
       default:
         notify(app, warning.message, { duration: 6000 });
     }
+  }
+  for (const next of Array.isArray(outcome.nextOccurrences) ? outcome.nextOccurrences : []) {
+    if (!next || !hasId(next.id)) continue;
+    notify(app, `Próxima ocorrência criada para ${formatDate(next.due_date, 'short')}`, {
+      tone: 'success',
+      duration: 8000,
+      id: `recurrence:${next.id}`,
+      action: { label: 'Abrir', onclick: () => attempt(app, () => app.ui && app.ui.openPanel && app.ui.openPanel('task', next.id)) },
+      actions: [{ label: 'Desfazer', onclick: () => attempt(app, () => app.cmd.deleteTask(next.id)) }],
+    });
   }
   if (hasId(outcome.autoStartedDemand)) {
     const demand = app.sel.demand(outcome.autoStartedDemand);
@@ -1371,6 +1382,10 @@ export function entityFlags(app, type, entity, { hideNoDemand = false, hideTime 
       const done = subs.filter((s) => app.sel.status(s.status).category === 'done').length;
       chips.push(flag('list', `${done}/${subs.length}`, { tone: done === subs.length ? 'success' : 'neutral', title: `${done} de ${plural(subs.length, 'subtarefa concluída', 'subtarefas concluídas')}` }));
     }
+  }
+  if (type === 'task' && entity.recurrence) {
+    const rule = describeRecurrence(entity.recurrence);
+    if (rule) chips.push(h('span', { class: 'en-flag en-flag-neutral en-flag-repeat', title: `Repete: ${rule}`, 'aria-label': `Repete: ${rule}` }, icon('refresh', { size: 12 })));
   }
   const notes = app.sel.notes(type, entity.id).length;
   if (notes) chips.push(flag('message', String(notes), { title: plural(notes, 'observação', 'observações') }));

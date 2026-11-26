@@ -14,6 +14,7 @@ import { META_FIELDS } from '../data/schema.js';
 import { DEFAULT_PRIORITY, PRIORITIES } from './priorities.js';
 import { DEFAULT_STATUS_ID, categoryOf, isOpenCategory, statusById } from './statuses.js';
 import { ACTIONS, makeEvent, sortEvents } from './timeline.js';
+import { describeRecurrence } from './recurrence.js';
 
 /** Rótulos (pt-BR) de todos os campos de projeto, demanda e tarefa. */
 export const FIELD_LABELS = Object.freeze({
@@ -209,7 +210,7 @@ export function fieldLabel(field) {
  * @returns {string}
  */
 export function formatFieldValue(field, value, ctx = {}) {
-  if (isEmptyValue(value)) return DASH;
+  if (isEmptyValue(value)) return field === 'recurrence' ? 'Não repete' : DASH;
   const c = ctx || {};
   switch (field) {
     case 'estimate_minutes':
@@ -245,6 +246,8 @@ export function formatFieldValue(field, value, ctx = {}) {
       const name = nameIn(c.tasksById, value);
       return name ? quoted(name) : 'outra tarefa';
     }
+    case 'recurrence':
+      return describeRecurrence(value) || 'regra desconhecida';
     default:
       break;
   }
@@ -406,6 +409,9 @@ function describeCreated(event, c) {
     const maps = { project: c.projectsById, demand: c.demandsById, task: c.tasksById };
     const source = nameIn(maps[event.entity_type], meta.duplicated_from);
     detail = source ? `Cópia de ${quoted(source)}` : c.word('Criada a partir de uma cópia', 'Criado a partir de uma cópia');
+  } else if (meta.recurrence && typeof meta.recurrence === 'object' && meta.recurrence.from) {
+    const source = nameIn(c.tasksById, meta.recurrence.from);
+    detail = source ? `Próxima ocorrência de ${quoted(source)}` : 'Próxima ocorrência de uma tarefa recorrente';
   } else if (meta.parent_id) {
     const parent = nameIn(c.tasksById, meta.parent_id);
     if (parent) detail = `Subtarefa de ${quoted(parent)}`;

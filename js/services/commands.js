@@ -32,7 +32,8 @@ import { ENTRY_SOURCE, TIMER, ValidationError, findOverlaps, formatDuration, man
 import { WEEK_KIND, allWeekItems, carryOverPlan, kindForNewItem } from '../domain/weekplan.js';
 import { MAX_TEMPLATES, TemplateError, availableTemplates, isBuiltinTemplate, normalizeTemplate, normalizeTemplateList, planTemplate } from '../domain/templates.js';
 import { classifyTarget, compareLinks } from '../domain/links.js';
-import { uuid } from '../core/ids.js';
+import { derivedUuid, uuid } from '../core/ids.js';
+import { RecurrenceError, carriedRecurrence, nextOccurrence, normalizeRecurrence, occurrenceBase } from '../domain/recurrence.js';
 
 /**
  * Erro de regra de negócio de um comando. `message` está em pt-BR e pode ser mostrada ao usuário.
@@ -84,7 +85,7 @@ const EDITABLE = Object.freeze({
   task: new Set([
     'name', 'description', 'demand_id', 'parent_id', 'status', 'priority', 'planned_start', 'due_date', 'estimate_minutes', 'owner', 'tags',
     'blocked_reason', 'waiting_on', 'weight', 'required', 'sort_order', 'actual_start',
-    'follow_up_date',
+    'follow_up_date', 'recurrence',
   ]),
 });
 
@@ -144,6 +145,8 @@ function sameValue(a, b) {
   const y = b === undefined ? null : b;
   if (x === y) return true;
   if (Array.isArray(x) && Array.isArray(y)) return x.length === y.length && x.every((item, i) => item === y[i]);
+  // Objetos JSON (ex.: recurrence): mesma estrutura = mesmo valor.
+  if (x && y && typeof x === 'object' && typeof y === 'object') return JSON.stringify(x) === JSON.stringify(y);
   return false;
 }
 
@@ -185,7 +188,7 @@ export function createCommands(app) {
   /** Instante (ISO) do comando em curso: todos os eventos e carimbos de um comando usam o mesmo. */
   let now = null;
   let outcome = null;
-  let last = Object.freeze({ command: null, warnings: EMPTY, autoStartedDemand: null, autoStartedFrom: null });
+  let last = Object.freeze({ command: null, warnings: EMPTY, autoStartedDemand: null, autoStartedFrom: null, nextOccurrences: EMPTY });
 
   const fail = (code, message, data = null) => {
     throw new CommandError(code, message, data);
@@ -203,7 +206,7 @@ export function createCommands(app) {
       const outer = depth === 0;
       if (outer) {
         now = app.clock.nowIso();
-        outcome = { command: name, warnings: [], autoStartedDemand: null, autoStartedFrom: null };
+        outcome = { command: name, warnings: [], autoStartedDemand: null, autoStartedFrom: null, nextOccurrences: [] };
       }
       depth += 1;
       let result;
@@ -219,10 +222,10 @@ export function createCommands(app) {
         depth -= 1;
       }
       if (outer) {
-        last = Object.freeze({ ...outcome, warnings: Object.freeze(outcome.warnings.map((w) => Object.freeze(w))) });
+        last = Object.freeze({ ...outcome, warnings: Object.freeze(outcome.warnings.map((w) => Object.freeze(w))), nextOccurrences: Object.freeze(outcome.nextOccurrences.map((o) => Object.freeze(o))) });
         now = null;
         outcome = null;
-        if (app.events) app.events.emit('command', { name, result, warnings: last.warnings, autoStartedDemand: last.autoStartedDemand });
+        if (app.events) app.events.emit('command', { name, result, warnings: last.warnings, autoStartedDemand: last.autoStartedDemand, nextOccurrences: last.nextOccurrences });
       }
       return result;
     };
@@ -236,6 +239,7 @@ export function createCommands(app) {
   function absorb(result) {
     if (!outcome || !result) return result;
     for (const w of result.warnings) outcome.warnings.push(w);
+    for (const o of result.nextOccurrences || EMPTY) if (!outcome.nextOccurrences.some((x) => x.id === o.id)) outcome.nextOccurrences.push(o);
     if (result.autoStartedDemand) {
       outcome.autoStartedDemand = result.autoStartedDemand;
       outcome.autoStartedFrom = result.autoStartedFrom;
@@ -411,6 +415,13 @@ export function createCommands(app) {
         if (!hasId(value)) return null;
         if (typeof value !== 'string') fail('invalid_parent', 'Tarefa principal inválida.', { id: value });
         return value;
+      case 'recurrence':
+        try {
+          return normalizeRecurrence(value);
+        } catch (error) {
+          if (error instanceof RecurrenceError) return fail(error.code, error.message, { field, ...(error.data || {}) });
+          throw error;
+        }
       default:
         return fail('invalid_field', `O campo "${field}" não pode ser alterado por este comando.`, { field });
     }
@@ -607,6 +618,75 @@ export function createCommands(app) {
       }
     }
     if (inFlight && !isInFlightCategory(tr.from.category)) autoStartDemand(task, result, list);
+    if (tr.completed && task.recurrence) {
+      const next = createNextOccurrence(task);
+      if (next) result.nextOccurrences.push(next);
+    }
+  }
+
+  // --- tarefas recorrentes -------------------------------------------------------------------------
+  /** Campos que a próxima ocorrência copia (dependências, apontamentos, links e "Cobrar em" NÃO vão junto). */
+  const RECURRING_COPY_FIELDS = Object.freeze(['description', 'priority', 'estimate_minutes', 'owner', 'tags', 'weight', 'required']);
+
+  /**
+   * Tarefa recorrente concluída → cria a próxima ocorrência (com as subtarefas). O id é DERIVADO do id da
+   * tarefa + novo prazo: dois aparelhos criam a mesma linha (o merge junta) e reabrir + concluir de novo não
+   * duplica (se a linha já existe — mesmo excluída pelo "Desfazer" —, nada é criado).
+   * @returns {{ id: string, from: string, due_date: string }|null}
+   */
+  function createNextOccurrence(task) {
+    const rule = carriedRecurrence(task.recurrence, { dueDate: task.due_date, completedDate: isoToDateStr(now) });
+    if (!rule) return null;
+    const ctx = { dueDate: task.due_date, completedDate: isoToDateStr(now) };
+    const dueDate = nextOccurrence(rule, ctx);
+    if (!dueDate) return null;
+    const id = derivedUuid(task.id, dueDate);
+    if (store.get('tasks', id)) return null;
+    const delta = diffDays(occurrenceBase(rule, ctx), dueDate);
+    const shift = (date) => (isValidDateStr(date) ? addDays(date, delta) : null);
+    const parent = isSubtask(task) ? liveGet('tasks', task.parent_id) : null;
+    const demand = demandOfTask(task);
+    const demandId = demand ? demand.id : null;
+    const siblings = parent ? subtasksOf(parent.id) : topTasksOf(demandId);
+    const copy = insertTask(
+      {
+        ...pick(task, RECURRING_COPY_FIELDS),
+        id,
+        name: task.name,
+        demand_id: demandId,
+        parent_id: parent ? parent.id : null,
+        status: parent ? 'todo' : 'backlog',
+        priority: task.priority || DEFAULT_PRIORITY,
+        required: task.required === false ? false : true,
+        tags: Array.isArray(task.tags) ? [...task.tags] : [],
+        due_date: dueDate,
+        planned_start: shift(task.planned_start),
+        recurrence: rule,
+        sort_order: orderValue('tasks', siblings, null, { afterId: task.id }),
+      },
+      { recurrence: { from: task.id } },
+    );
+    if (!parent) {
+      for (const sub of subtasksOf(task.id).filter((s) => !s.archived_at).sort(bySortOrder)) {
+        const subId = derivedUuid(copy.id, sub.id);
+        if (store.get('tasks', subId)) continue;
+        insertTask({
+          ...pick(sub, RECURRING_COPY_FIELDS),
+          id: subId,
+          name: sub.name,
+          demand_id: demandId,
+          parent_id: copy.id,
+          status: 'todo',
+          priority: sub.priority || DEFAULT_PRIORITY,
+          required: sub.required === false ? false : true,
+          tags: Array.isArray(sub.tags) ? [...sub.tags] : [],
+          due_date: shift(sub.due_date),
+          planned_start: shift(sub.planned_start),
+          sort_order: finite(sub.sort_order),
+        });
+      }
+    }
+    return { id: copy.id, from: task.id, due_date: dueDate };
   }
 
   function demandStatusEffects(demand, tr, result, list) {
@@ -652,7 +732,7 @@ export function createCommands(app) {
     requireStatus(list, statusId);
     const table = ENTITY_TABLE[type];
     const tr = transitionPatch(row, statusId, { statuses: list, nowIso: now });
-    const result = { entity: row, transition: tr, warnings: [], autoStartedDemand: null, autoStartedFrom: null, stoppedTimers: [] };
+    const result = { entity: row, transition: tr, warnings: [], autoStartedDemand: null, autoStartedFrom: null, stoppedTimers: [], nextOccurrences: [] };
     const blockedReason = opts.blocked_reason === undefined ? undefined : textOrNull('blocked_reason', opts.blocked_reason);
     const waitingOn = opts.waiting_on === undefined ? undefined : textOrNull('waiting_on', opts.waiting_on);
 
