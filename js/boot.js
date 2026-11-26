@@ -27,8 +27,28 @@ import { openNewPasswordDialog } from './ui/auth.js';
 import { confirmDialog, toast } from './ui/kit/overlays.js';
 import { loadViews } from './ui/views/index.js';
 
-/** Versão do aplicativo (mostrada em Configurações → Sobre). */
-export const APP_VERSION = '1.0.0';
+/**
+ * Versão do aplicativo (mostrada em Configurações → Sobre). Deve ser IGUAL a CACHE_VERSION em sw.js
+ * (um teste confere): mude as duas a cada publicação.
+ */
+export const APP_VERSION = 'v001';
+
+/**
+ * Endereços (sem query nem hash) dos recursos desta origem que a página carregou — a lista enviada ao service
+ * worker. Tirar a query evita que textos passados por parâmetro (ex.: compartilhamento) vão para o cache.
+ * @param {string} origin location.origin
+ * @param {string} href location.href
+ * @param {Array<{name?: string}>} entries performance.getEntriesByType('resource')
+ * @returns {string[]}
+ */
+export function appResourceUrls(origin, href, entries = []) {
+  const clean = (url) => String(url).split('#')[0].split('?')[0];
+  const urls = new Set([clean(href)]);
+  for (const entry of entries || []) {
+    if (entry && typeof entry.name === 'string' && entry.name.startsWith(origin)) urls.add(clean(entry.name));
+  }
+  return [...urls];
+}
 
 /** Chave (no armazenamento do dispositivo) da configuração do Supabase gravada pela tela de Configurações. */
 export const CONFIG_KEY = 'dm.config';

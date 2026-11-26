@@ -1312,10 +1312,3 @@
 .v-calendario-overdue-toggle {
   align-self: flex-start;
 }
-
-/* Contorno: no kit, button.status/.priority têm margem negativa + max-width: 100%; numa célula de largura
- * automática o selo compacto fica preso em 14 px e o ícone encolhe para 4 px. Aqui o selo usa a própria largura. */
-.v-calendario-row .en-cell > button.status-compact,
-.v-calendario-row .en-cell > button.priority-compact {
-  max-width: none;
-}

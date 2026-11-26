@@ -5,12 +5,16 @@
 //   - sem rede (ou rede lenta demais), usa a cópia do cache;
 //   - navegações sem cópia própria caem no index.html do cache.
 // Nunca toca em requisições de outra origem (Supabase) nem em métodos diferentes de GET.
+// Toda busca na rede usa cache: 'no-cache' (revalida pelo ETag): o cache HTTP do navegador (GitHub Pages manda
+// max-age=600) não pode misturar módulos velhos com uma publicação nova.
+// Navegações são normalizadas para o caminho SEM query/hash (na rede e na chave do cache): textos passados por
+// parâmetro (ex.: compartilhamento) nunca vão para logs de rede nem para o cache. A página lê a query dela mesma.
 //
 // Na primeira visita a página envia { type: 'cache-urls', urls } com tudo o que carregou, para o cache
-// ficar completo sem esperar uma segunda visita. Mude CACHE_VERSION a cada publicação: os caches antigos
-// são apagados na ativação.
+// ficar completo sem esperar uma segunda visita. Mude CACHE_VERSION a cada publicação (igual a APP_VERSION
+// em js/boot.js — um teste confere): os caches antigos são apagados na ativação.
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v001';
 const CACHE_PREFIX = 'dm-shell-';
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
 const NETWORK_TIMEOUT_MS = 2500;
@@ -74,18 +78,36 @@ function remember(request, response) {
     });
 }
 
-async function fromCache(request) {
+async function fromCache(request, navigate) {
   const cache = await caches.open(CACHE_NAME);
   const exact = await cache.match(request);
   if (exact) return exact;
-  if (request.mode === 'navigate') {
+  if (navigate) {
     return (await cache.match('./index.html', { ignoreSearch: true })) || (await cache.match('./', { ignoreSearch: true })) || null;
   }
   return (await cache.match(request, { ignoreSearch: true })) || null;
 }
 
-async function networkFirst(request) {
-  const network = fetch(request).then((response) => {
+/**
+ * Requisição que vai para a rede/cache: navegações viram GET do caminho sem query nem hash.
+ * @param {Request} request
+ * @returns {Request|string}
+ */
+function normalized(request) {
+  if (request.mode !== 'navigate') return request;
+  const url = new URL(request.url);
+  url.search = '';
+  url.hash = '';
+  return url.href;
+}
+
+async function networkFirst(original) {
+  const navigate = original.mode === 'navigate';
+  const request = normalized(original);
+  // Navegação: redirect 'manual' como a requisição original (responder uma navegação com uma resposta
+  // "redirected" é erro de rede; a opaqueredirect volta ao navegador, que segue o redirecionamento).
+  const init = navigate ? { cache: 'no-cache', redirect: 'manual' } : { cache: 'no-cache' };
+  const network = fetch(request, init).then((response) => {
     remember(request, response);
     return response;
   });
@@ -100,10 +122,10 @@ async function networkFirst(request) {
     const first = await Promise.race([network, timeout]);
     if (first) return first;
     // Rede lenta: usa o cache se houver; senão continua esperando a rede.
-    const cached = await fromCache(request);
+    const cached = await fromCache(request, navigate);
     return cached || (await network);
   } catch (error) {
-    const cached = await fromCache(request);
+    const cached = await fromCache(request, navigate);
     if (cached) return cached;
     throw error;
   } finally {
@@ -128,8 +150,9 @@ self.addEventListener('message', (event) => {
           const url = new URL(String(raw), self.location.href);
           if (url.origin !== self.location.origin || UNCACHED_PATHS.test(url.pathname)) continue;
           url.hash = '';
+          url.search = '';
           if (await cache.match(url.href)) continue;
-          const response = await fetch(url.href, { credentials: 'same-origin' });
+          const response = await fetch(url.href, { cache: 'no-cache', credentials: 'same-origin' });
           if (response.ok && response.type === 'basic') await cache.put(url.href, response);
         } catch {
           /* um recurso que falhou não impede os outros */

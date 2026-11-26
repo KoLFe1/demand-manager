@@ -872,11 +872,13 @@ function ensureToastHost() {
  * @param {object} [options]
  * @param {'default'|'success'|'warn'|'danger'} [options.tone='default']
  * @param {{ label: string, onclick: () => void }} [options.action] botão de ação (ex.: Desfazer); clicar fecha o aviso
+ * @param {Array<{ label: string, onclick?: () => void }>} [options.actions] até 2 botões (ex.: [Recarregar] [Depois]);
+ *   somados a `action` (que vem primeiro), no máximo 2; clicar qualquer um fecha o aviso
  * @param {number} [options.duration=4000] ms até sumir; 0 = fica até ser fechado
  * @param {string} [options.id] um aviso com o mesmo id substitui o anterior no lugar
  * @returns {() => void} função que fecha o aviso
  */
-export function toast(message, { tone = 'default', action, duration = 4000, id } = {}) {
+export function toast(message, { tone = 'default', action, actions, duration = 4000, id } = {}) {
   const host = ensureToastHost();
   const resolvedTone = TOAST_TONES[tone] || 'default';
   const key = id == null ? null : String(id);
@@ -906,20 +908,23 @@ export function toast(message, { tone = 'default', action, duration = 4000, id }
     },
     TOAST_ICONS[resolvedTone] ? h('span', { class: 'toast-icon' }, makeIcon(TOAST_ICONS[resolvedTone], { size: 16 })) : null,
     h('span', { class: 'toast-message' }, message),
-    action && action.label
-      ? h(
+    ...[action, ...(Array.isArray(actions) ? actions : [])]
+      .filter((item) => item && item.label)
+      .slice(0, 2)
+      .map((item) =>
+        h(
           'button',
           {
             type: 'button',
             class: 'toast-action',
             onclick: (ev) => {
               dismiss();
-              if (typeof action.onclick === 'function') action.onclick(ev);
+              if (typeof item.onclick === 'function') item.onclick(ev);
             },
           },
-          action.label,
-        )
-      : null,
+          item.label,
+        ),
+      ),
     h('button', { type: 'button', class: 'toast-close', title: 'Fechar aviso', 'aria-label': 'Fechar aviso', onclick: dismiss }, makeIcon('x', { size: 14 })),
   );
 

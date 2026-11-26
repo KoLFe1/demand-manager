@@ -4,20 +4,18 @@
 // O service worker NÃO é registrado fora de http(s), nem com ?nosw=1, ?demo=1 ou ?db=NOME (testes e
 // demonstração não devem deixar caches para trás).
 
-import { boot, shouldRegisterServiceWorker } from './boot.js';
+import { appResourceUrls, boot, shouldRegisterServiceWorker } from './boot.js';
 import { toast } from './ui/kit/overlays.js';
 
-/** Lista de recursos que esta página já carregou (o worker guarda tudo no cache já na primeira visita). */
+/** Lista de recursos que esta página já carregou, sem query/hash (o worker guarda tudo no cache já na primeira visita). */
 function loadedResources() {
-  const urls = new Set([location.href.split('#')[0]]);
+  let entries = [];
   try {
-    for (const entry of performance.getEntriesByType('resource')) {
-      if (entry && typeof entry.name === 'string' && entry.name.startsWith(location.origin)) urls.add(entry.name.split('#')[0]);
-    }
+    entries = performance.getEntriesByType('resource');
   } catch {
     /* API de desempenho indisponível */
   }
-  return [...urls];
+  return appResourceUrls(location.origin, location.href, entries);
 }
 
 /** Registra o service worker e avisa quando uma versão nova assumir o controle da página. */
@@ -31,13 +29,16 @@ async function registerServiceWorker() {
     toast('Nova versão disponível', {
       id: 'sw-update',
       duration: 0,
-      action: {
-        label: 'Recarregar',
-        onclick: () => {
-          reloading = true;
-          location.reload();
+      actions: [
+        {
+          label: 'Recarregar',
+          onclick: () => {
+            reloading = true;
+            location.reload();
+          },
         },
-      },
+        { label: 'Depois' },
+      ],
     });
   });
   try {

@@ -313,14 +313,6 @@
   color: var(--text-faint);
 }
 
-/* Contorno de um defeito do kit: selos compactos clicáveis (margem negativa + max-width: 100%) encolhem o
-   ícone quando a célula tem a largura do próprio conteúdo (ex.: coluna de prioridade da taskRow). */
-.v-dashboard button.priority-compact,
-.v-dashboard button.status-compact,
-.v-dashboard button.deadline.is-empty {
-  max-width: none;
-}
-
 .v-dashboard .en-cell-priority {
   justify-content: center;
   min-width: 16px;

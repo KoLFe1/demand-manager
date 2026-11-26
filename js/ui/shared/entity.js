@@ -85,7 +85,7 @@ function isCommandError(err) {
  * Mostra um aviso rápido: usa o da casca (app.ui.toast) quando existe, senão o do kit.
  * @param {object} app
  * @param {string} message
- * @param {object} [options] mesmas opções de toast() do kit (tone, action, duration, id)
+ * @param {object} [options] mesmas opções de toast() do kit (tone, action, actions, duration, id) — repassadas sem mudança
  */
 export function notify(app, message, options) {
   try {

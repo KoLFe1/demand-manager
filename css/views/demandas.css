@@ -394,26 +394,10 @@
   min-width: 22px;
 }
 
-/* células de metadados: os selos clicáveis do kit usam margem negativa (área de toque maior); sem
-   compensar, a célula mede o selo 10–12 px mais estreito e o texto vira reticências à toa */
-.v-dm-c > button.status,
-.v-dm-c > button.priority,
-.v-dm-c > button.deadline,
-.v-dm-c > button.owner {
-  max-width: calc(100% + 10px);
-}
-
+/* células de metadados: o seletor (.en-picker) tem margem negativa de 6 px de cada lado (área de toque maior);
+   o limite de largura devolve esses 12 px (os selos clicáveis já são compensados no kit) */
 .v-dm-c > .en-picker {
   max-width: calc(100% + 12px);
-}
-
-/* mesma compensação nas linhas padrão (taskRow) da demanda expandida: sem ela o ícone da prioridade
-   compacta encolhe para ~4 px (o botão fica limitado à largura da célula, que já desconta a margem) */
-.v-dm-expansion .en-cell > button.status,
-.v-dm-expansion .en-cell > button.priority,
-.v-dm-expansion .en-cell > button.deadline,
-.v-dm-expansion .en-cell > button.owner {
-  max-width: calc(100% + 10px);
 }
 
 .v-dm-c-next {

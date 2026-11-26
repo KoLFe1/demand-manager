@@ -56,6 +56,57 @@
 <noscript>
   <p class="boot-noscript">O Demand Manager precisa de JavaScript para funcionar. Ative o JavaScript no navegador e recarregue a página.</p>
 </noscript>
+<script>
+  // Vigia da abertura: erro num módulo importado por main.js acontece antes de boot() e a tela de erro do boot
+  // nunca aparece. Se um script/módulo falhar ao carregar, ou se em 10 s o app não ficar pronto (DM.ready), troca
+  // a abertura por um aviso com "Recarregar" e "Limpar cache e recarregar". Só age enquanto a abertura
+  // (.boot-splash) ainda está na tela: a casca e a tela de erro do boot a substituem.
+  (function () {
+    var done = false;
+    function show(loadError) {
+      var root = document.getElementById('app');
+      if (done || !root || !root.querySelector('.boot-splash')) return;
+      if (window.DM && (window.DM.ready === true || window.DM.error)) return;
+      done = true;
+      var box = document.createElement('div');
+      box.className = 'boot-error';
+      box.setAttribute('role', 'alert');
+      box.setAttribute('data-boot-watchdog', loadError ? 'load' : 'timeout');
+      box.innerHTML = '<div class="boot-error-card"><div class="boot-error-title"></div><p class="boot-error-hint"></p>' +
+        '<div class="boot-error-actions" style="gap:8px;flex-wrap:wrap"><button type="button" class="btn">Limpar cache e recarregar</button>' +
+        '<button type="button" class="btn btn-primary">Recarregar</button></div></div>';
+      box.querySelector('.boot-error-title').textContent = loadError ? 'Não foi possível carregar o Demand Manager' : 'O Demand Manager está demorando para abrir';
+      box.querySelector('.boot-error-hint').textContent = loadError
+        ? 'Um arquivo do aplicativo falhou ao carregar (talvez uma atualização pela metade ou falta de conexão).'
+        : 'Verifique a conexão e recarregue. Se o problema continuar, limpe o cache do aplicativo (seus dados não são apagados).';
+      var buttons = box.querySelectorAll('button');
+      buttons[1].onclick = function () { location.reload(); };
+      buttons[0].onclick = function () {
+        var jobs = [];
+        try {
+          if (window.caches) jobs.push(caches.keys().then(function (names) {
+            return Promise.all(names.filter(function (n) { return n.indexOf('dm-shell') === 0; }).map(function (n) { return caches.delete(n); }));
+          }));
+          if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function (regs) {
+            return Promise.all(regs.map(function (r) { return r.unregister(); }));
+          }));
+        } catch (e) { /* segue para o recarregamento */ }
+        Promise.all(jobs).catch(function () {}).then(function () { location.reload(); });
+      };
+      root.replaceChildren(box);
+    }
+    // Erros antes de o boot começar (window.DM ainda não existe): módulo que não carregou (evento no <script>,
+    // capturado) ou exceção ao avaliar um módulo. config.js é opcional e não conta.
+    window.addEventListener('error', function (e) {
+      var t = e.target;
+      var src = t && t.tagName === 'SCRIPT' ? t.src : e.filename || '';
+      if (t && t !== window && t.tagName !== 'SCRIPT') return;
+      if (/\/config\.js(\?|$)/.test(src)) return;
+      setTimeout(function () { if (!window.DM) show(true); }, 1500);
+    }, true);
+    setTimeout(function () { show(false); }, 10000);
+  })();
+</script>
 <script src="config.js"></script>
 <script type="module" src="js/main.js"></script>
 </body>
