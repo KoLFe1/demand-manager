@@ -17,6 +17,8 @@ import { confirmDialog, openModal, toast } from '../kit/overlays.js';
 import { syncDetails } from '../shell.js';
 import { rekeyBackup } from '../../boot.js';
 import { openIcsDialog } from '../ics-export.js';
+import { DIGEST_PREF_ENABLED, digestEnabled, digestNotifyEnabled, notificationPermission, openDigestModal, requestDigestNotifications } from '../digest.js';
+import { DEFAULT_FOLLOWUP_DAYS } from '../../domain/followup.js';
 import { deleteTemplate, listTemplates, openTemplateDialog, renameTemplate } from '../templates.js';
 
 const TRASH_LIMIT = 30;
@@ -27,6 +29,7 @@ const SECTIONS = Object.freeze([
   { id: 'preferencias', label: 'Preferências', icon: 'settings' },
   { id: 'dados', label: 'Dados', icon: 'download' },
   { id: 'modelos', label: 'Modelos', icon: 'copy' },
+  { id: 'lembretes', label: 'Lembretes', icon: 'bell' },
   { id: 'calendario-externo', label: 'Calendário externo', icon: 'calendar' },
   { id: 'status', label: 'Status', icon: 'circle-dot' },
   { id: 'sobre', label: 'Sobre', icon: 'info' },
@@ -690,6 +693,86 @@ function renderTemplates(app) {
   );
 }
 
+function renderReminders(app) {
+  const permission = notificationPermission();
+  const unsupported = permission === 'unsupported';
+  const notifyOn = !unsupported && permission === 'granted' && digestNotifyEnabled(app);
+  const days = app.settings.get('followup.defaultDays', DEFAULT_FOLLOWUP_DAYS);
+  const rerenderSoon = () => app.ui && app.ui.rerender();
+  return section(
+    'lembretes',
+    'Lembretes',
+    'O “Resumo do dia” aparece na primeira vez que você abre o app no dia, neste dispositivo: atrasadas, vencimentos de hoje e dos próximos dias úteis, cobranças e — às segundas — como foi a semana passada.',
+    settingRow(
+      'Resumo do dia ao abrir o app',
+      'Só aparece quando há algo a mostrar. Também fica na paleta de comandos (Ctrl+K → “Resumo do dia”) e no botão do sino do Início.',
+      h(
+        'div',
+        { class: 'v-config-inline' },
+        switchInput({
+          checked: digestEnabled(app),
+          ariaLabel: 'Resumo do dia ao abrir o app',
+          attrs: { 'data-field': 'digest-enabled' },
+          onchange: (on) => {
+            app.prefs.set(DIGEST_PREF_ENABLED, !!on);
+            rerenderSoon();
+          },
+        }),
+        button({ label: 'Ver agora', icon: 'bell', size: 'sm', variant: 'ghost', attrs: { 'data-action': 'digest-now' }, onclick: () => openDigestModal(app) }),
+      ),
+      { key: 'digest' },
+    ),
+    settingRow(
+      'Notificação no celular/navegador quando abrir o app',
+      unsupported
+        ? 'Este navegador não oferece notificações.'
+        : permission === 'denied'
+          ? 'As notificações deste site estão bloqueadas no navegador. Libere nas configurações do site para usar.'
+          : 'Mostra a manchete do resumo como notificação do sistema no primeiro acesso do dia. Só funciona com o app aberto (não há aviso com o app fechado).',
+      switchInput({
+        checked: notifyOn,
+        disabled: unsupported,
+        ariaLabel: 'Notificação no celular/navegador quando abrir o app',
+        attrs: { 'data-field': 'digest-notify' },
+        onchange: async (on) => {
+          await requestDigestNotifications(app, !!on);
+          rerenderSoon();
+        },
+      }),
+      { key: 'digest-notify' },
+    ),
+    settingRow(
+      'Cobrar de novo em',
+      'Dias úteis até a próxima cobrança quando você registra “Cobrei agora” (de 1 a 30). Sincroniza com a sua conta.',
+      numberInput({
+        value: days,
+        min: 1,
+        max: 30,
+        step: 1,
+        suffix: 'dias úteis',
+        size: 'sm',
+        ariaLabel: 'Cobrar de novo em N dias úteis',
+        attrs: { 'data-field': 'followup-days' },
+        onchange: (n) => {
+          if (n === null) return;
+          if (!Number.isInteger(n) || n < 1 || n > 30) {
+            toast('Informe um número inteiro de dias úteis, de 1 a 30.', { tone: 'danger' });
+            rerender(app);
+            return;
+          }
+          setSetting(app, 'followup.defaultDays', n);
+        },
+      }),
+      { key: 'followup-days' },
+    ),
+    h(
+      'p',
+      { class: 'v-config-note' },
+      'E-mail automático com o resumo fica para uma versão futura. Para receber lembretes no celular ou por e-mail hoje: exporte os prazos em “Calendário externo” (.ics — cada prazo traz um alarme na véspera às 9h) e, no Google Agenda, ligue “Configurações → Configurações gerais → Notificações → Agenda diária” para receber todo dia de manhã um e-mail com a agenda.',
+    ),
+  );
+}
+
 function renderExternalCalendar(app) {
   const step = (title, text) => h('li', { class: 'v-config-ics-step' }, h('strong', null, title), ' ', text);
   return section(
@@ -779,7 +862,7 @@ export default {
     return h(
       'div',
       { class: cx('v-config', ctx && ctx.isMobile && 'is-mobile') },
-      h('div', { class: 'v-config-inner' }, renderToc(), renderAccountSection(app), renderPreferences(app), renderData(app), renderTemplates(app), renderExternalCalendar(app), renderStatuses(app), renderAbout(app)),
+      h('div', { class: 'v-config-inner' }, renderToc(), renderAccountSection(app), renderPreferences(app), renderData(app), renderTemplates(app), renderReminders(app), renderExternalCalendar(app), renderStatuses(app), renderAbout(app)),
     );
   },
 };

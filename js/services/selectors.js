@@ -18,13 +18,14 @@
 // Dentro de `store.transact` a versão do banco ainda não mudou: não chame seletores no meio de uma
 // transação esperando ver as escritas dela (os comandos leem direto do banco por esse motivo).
 
-import { addDays, isValidDateStr, startOfWeek } from '../core/dates.js';
+import { addDays, isValidDateStr, startOfWeek, weekdayIndex } from '../core/dates.js';
 import { ENTITY_TABLE, entityCode } from '../data/schema.js';
 import { deadlineInfo, dueBuckets as bucketsOf } from '../domain/deadlines.js';
 import { blockingPrereqs, buildGraph, downstreamCount, findCycles, isBlockedByDependency, scheduleConflicts } from '../domain/dependencies.js';
 import { compareManualOrder, normalizeText } from '../domain/filters.js';
 import { computeMetrics } from '../domain/metrics.js';
 import { buildStatusReport } from '../domain/report.js';
+import { buildDailyDigest } from '../domain/digest.js';
 import { nextActions, prioritySuggestions } from '../domain/nextactions.js';
 import { demandProgress, projectProgress, taskFraction } from '../domain/progress.js';
 import { isCancelled, isClosed, isOpen, resolveStatuses, statusById } from '../domain/statuses.js';
@@ -1262,6 +1263,30 @@ export function createSelectors(app) {
       if (metricsCache.size >= METRICS_CACHE_SIZE) metricsCache.delete(metricsCache.keys().next().value);
       metricsCache.set(key, result);
       return result;
+    },
+
+    // ----- resumo do dia (lembretes) ---------------------------------------------------------------
+    /**
+     * "Resumo do dia" (buildDailyDigest do domínio): atrasadas, vencem hoje, próximos vencimentos (dias úteis de
+     * 'deadline.soonDays'), cobranças vencidas/hoje e — às segundas — o resumo da semana anterior.
+     * @returns {object}
+     */
+    dailyDigest() {
+      const day = today();
+      const soon = soonDays();
+      return memo(`dailyDigest|${day}|${soon}`, () => {
+        const monday = weekdayIndex(day) === 0;
+        return buildDailyDigest({
+          today: day,
+          demands: sel.demands(),
+          tasks: sel.tasks(),
+          statuses: statuses(),
+          soonDays: soon,
+          demandsById: struct().demandsById,
+          previousWeek: monday ? sel.weekSummary(addDays(day, -7)) : null,
+          currentWeekPlanned: monday ? sel.weekItems(day).length : null,
+        });
+      });
     },
 
     // ----- relatório de status --------------------------------------------------------------------

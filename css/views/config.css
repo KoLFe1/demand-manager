@@ -407,3 +407,5 @@
   color: var(--text);
   font-weight: var(--fw-semibold);
 }
+
+.v-config-inline { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; justify-content: flex-end; }

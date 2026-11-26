@@ -8,7 +8,7 @@
 //   panel() → { type, id } | null, rerender(), toast(message, opts), scope: { projectId }, setScope(patch),
 //   viewState(viewId), setViewState(viewId, patch)   // estado de qualquer tela (ex.: abrir outra já filtrada)
 //   current() → { type, id } | null, quickCreate(type, defaults), isMobile(), theme(), setTheme(t),
-//   // extras: shortcuts, showHelp(), openPalette(query), createProject(), openSync(anchor), destroy()
+//   // extras: shortcuts, showHelp(), openPalette(query), showDigest(), checkDailyDigest(), createProject(), openSync(anchor), destroy()
 // }
 //
 // Renderização: um único mount() (core/dom.js) desenha casca + tela + painel; mudanças no banco, na
@@ -23,6 +23,7 @@ import { createShortcuts } from '../core/shortcuts.js';
 import { TIMER, elapsedSeconds, formatDuration, isLongRunning, timerState } from '../domain/timetracking.js';
 import { alertsButton } from './alerts.js';
 import { accountSummary, openAccountDialog } from './auth.js';
+import { checkDailyDigest, openDigestModal } from './digest.js';
 import { openShortcutHelp } from './help.js';
 import { button, iconButton, textArea } from './kit/controls.js';
 import { alertBox, avatar, countBadge } from './kit/display.js';
@@ -1154,6 +1155,10 @@ export function startShell(app, root) {
     showHelp: () => openShortcutHelp(shortcuts.list()),
     /** Abre a paleta de comandos. */
     openPalette: (query = '') => openPalette(app, { query }),
+    /** Abre o "Resumo do dia". */
+    showDigest: () => openDigestModal(app),
+    /** 1º acesso do dia: abre o resumo se ligado, não vazio e ainda não mostrado hoje neste dispositivo. */
+    checkDailyDigest: () => checkDailyDigest(app),
     /** Abre o diálogo de novo projeto. */
     createProject: () => openProjectDialog(app),
     /** Abre os detalhes da sincronização ancorados em `anchor`. */
@@ -1350,7 +1355,17 @@ export function startShell(app, root) {
     if (app.store.versionChanged) showVersionChange({ newVersion: -1 });
   }
 
-  const minuteTimer = win.setInterval(() => schedule(), 60000);
+  const minuteTimer = win.setInterval(() => {
+    schedule();
+    checkDailyDigest(app); // app aberto de um dia para o outro
+  }, 60000);
+  // "Resumo do dia": logo depois do primeiro desenho e quando o app volta a ficar visível (celular).
+  const digestTimer = win.setTimeout(() => checkDailyDigest(app), 700);
+  const onVisible = () => {
+    if (doc.visibilityState === 'visible') checkDailyDigest(app);
+  };
+  doc.addEventListener('visibilitychange', onVisible);
+  cleanups.push(() => win.clearTimeout(digestTimer), () => doc.removeEventListener('visibilitychange', onVisible));
   const secondTimer = win.setInterval(tickTimers, 1000);
   cleanups.push(() => win.clearInterval(minuteTimer), () => win.clearInterval(secondTimer), () => router.stop());
 

@@ -19,6 +19,7 @@ import { button, segmented } from '../kit/controls.js';
 import { emptyState, progressBar, statCard } from '../kit/display.js';
 import { icon } from '../kit/icons.js';
 import { demandRow, taskRow } from '../shared/entity.js';
+import { digestButton } from '../digest.js';
 import { dashboardData, overdueCount, sortDemandRows } from './dashboard/data.js';
 import {
   actionRow,
@@ -145,6 +146,7 @@ function header(app, data, { showSummary = true } = {}) {
       h('h2', { class: 'v-dashboard-greeting' }, greetingOf(app)),
       showSummary ? h('p', { class: 'v-dashboard-summary' }, summaryText(data)) : null,
     ),
+    h('div', { class: 'v-dashboard-head-actions' }, digestButton(app)),
   );
 }
 

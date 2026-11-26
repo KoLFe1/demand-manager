@@ -20,6 +20,11 @@
   min-width: 0;
 }
 
+.v-dashboard-head-actions {
+  flex: none;
+  align-self: flex-start;
+}
+
 .v-dashboard-head-text {
   display: flex;
   flex-direction: column;

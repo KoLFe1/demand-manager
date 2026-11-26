@@ -97,6 +97,7 @@ function commandList(app) {
     { id: 'theme:light', group: 'Tema', label: 'Tema claro', keywords: 'tema aparencia claro light', icon: 'sun', checked: theme === 'light', run: () => ui.setTheme && ui.setTheme('light') },
     { id: 'theme:dark', group: 'Tema', label: 'Tema escuro', keywords: 'tema aparencia escuro dark noturno', icon: 'moon', checked: theme === 'dark', run: () => ui.setTheme && ui.setTheme('dark') },
     { id: 'theme:system', group: 'Tema', label: 'Tema do sistema', keywords: 'tema aparencia sistema automatico', icon: 'circle-half', checked: theme === 'system', run: () => ui.setTheme && ui.setTheme('system') },
+    { id: 'digest', group: 'Ações', label: 'Resumo do dia', keywords: 'resumo dia lembretes atrasadas vencimentos cobrancas hoje', icon: 'bell', keys: null, run: () => ui.showDigest && ui.showDigest() },
     { id: 'help', group: 'Ações', label: 'Atalhos de teclado', keywords: 'ajuda atalhos teclado', icon: 'keyboard', keys: '?', run: () => ui.showHelp && ui.showHelp() },
   );
   if (ui.scope && ui.scope.projectId) {
