@@ -17,6 +17,7 @@ import { button, iconButton, segmented } from '../kit/controls.js';
 import { kbd } from '../kit/display.js';
 import { icon } from '../kit/icons.js';
 import { filterBar } from '../shared/filterbar.js';
+import { openIcsDialog } from '../ics-export.js';
 import { dayView } from './calendario/day.js';
 import { monthView } from './calendario/month.js';
 import {
@@ -128,6 +129,17 @@ function toolbar(cal) {
       value: st.mode,
       options: MODES.map((mode) => ({ value: mode, label: MODE_LABELS[mode], icon: MODE_ICONS[mode] })),
       onchange: (mode) => cal.setState({ mode }),
+    }),
+    button({
+      label: cal.phone ? null : 'Exportar .ics',
+      icon: 'download',
+      size: 'sm',
+      variant: 'ghost',
+      ariaLabel: cal.phone ? 'Exportar prazos (.ics)' : null,
+      title: 'Exportar prazos para o Outlook/Google Agenda (.ics)',
+      class: 'v-calendario-ics',
+      attrs: { 'data-action': 'export-ics' },
+      onclick: () => openIcsDialog(cal.app),
     }),
   );
 }

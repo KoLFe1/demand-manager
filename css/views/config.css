@@ -391,3 +391,19 @@
   gap: var(--sp-1);
   margin-left: auto;
 }
+
+/* Calendário externo (.ics) */
+.v-config-ics-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: 0;
+  padding-left: var(--sp-5);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.v-config-ics-step strong {
+  color: var(--text);
+  font-weight: var(--fw-semibold);
+}

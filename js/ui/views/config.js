@@ -16,6 +16,7 @@ import { icon } from '../kit/icons.js';
 import { confirmDialog, openModal, toast } from '../kit/overlays.js';
 import { syncDetails } from '../shell.js';
 import { rekeyBackup } from '../../boot.js';
+import { openIcsDialog } from '../ics-export.js';
 import { deleteTemplate, listTemplates, openTemplateDialog, renameTemplate } from '../templates.js';
 
 const TRASH_LIMIT = 30;
@@ -26,6 +27,7 @@ const SECTIONS = Object.freeze([
   { id: 'preferencias', label: 'Preferências', icon: 'settings' },
   { id: 'dados', label: 'Dados', icon: 'download' },
   { id: 'modelos', label: 'Modelos', icon: 'copy' },
+  { id: 'calendario-externo', label: 'Calendário externo', icon: 'calendar' },
   { id: 'status', label: 'Status', icon: 'circle-dot' },
   { id: 'sobre', label: 'Sobre', icon: 'info' },
 ]);
@@ -688,6 +690,34 @@ function renderTemplates(app) {
   );
 }
 
+function renderExternalCalendar(app) {
+  const step = (title, text) => h('li', { class: 'v-config-ics-step' }, h('strong', null, title), ' ', text);
+  return section(
+    'calendario-externo',
+    'Calendário externo',
+    'Leve os prazos abertos para o Outlook ou o Google Agenda: cada prazo vira um evento de dia inteiro, com lembrete na véspera às 9h e um link que abre a tarefa aqui.',
+    settingRow(
+      'Exportar prazos (.ics)',
+      'Escolha o projeto e se entram demandas, tarefas e concluídas. No celular, o arquivo pode ser compartilhado direto com o app de agenda.',
+      button({ label: 'Exportar .ics…', icon: 'download', size: 'sm', onclick: () => openIcsDialog(app), attrs: { 'data-action': 'export-ics' } }),
+      { key: 'export-ics' },
+    ),
+    h('div', { class: 'v-config-divider' }),
+    h('div', { class: 'v-config-subtitle' }, 'Como importar'),
+    h(
+      'ul',
+      { class: 'v-config-ics-steps' },
+      step('Outlook:', 'Arquivo → Abrir e Exportar → Importar/Exportar → “Importar um arquivo iCalendar (.ics)” → escolha demand-manager-prazos.ics.'),
+      step('Google Agenda:', 'Configurações → Importar e exportar → Importar → selecione o arquivo e a agenda de destino (de preferência uma agenda só para os prazos).'),
+    ),
+    h(
+      'p',
+      { class: 'v-config-note' },
+      'Os eventos têm identificador fixo (UID): no Google Agenda, importar de novo atualiza os mesmos eventos. O Outlook pode duplicar eventos em uma nova importação — nesse caso, apague a agenda importada antes. Prazos removidos ou concluídos não somem sozinhos da agenda externa. A assinatura por endereço (atualização automática) fica para uma próxima versão.',
+    ),
+  );
+}
+
 function renderStatuses(app) {
   const list = app.sel.statuses();
   return section(
@@ -749,7 +779,7 @@ export default {
     return h(
       'div',
       { class: cx('v-config', ctx && ctx.isMobile && 'is-mobile') },
-      h('div', { class: 'v-config-inner' }, renderToc(), renderAccountSection(app), renderPreferences(app), renderData(app), renderTemplates(app), renderStatuses(app), renderAbout(app)),
+      h('div', { class: 'v-config-inner' }, renderToc(), renderAccountSection(app), renderPreferences(app), renderData(app), renderTemplates(app), renderExternalCalendar(app), renderStatuses(app), renderAbout(app)),
     );
   },
 };
