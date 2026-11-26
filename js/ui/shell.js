@@ -1325,6 +1325,29 @@ export function startShell(app, root) {
     if (app.store.persistError) showPersistError();
   }
 
+  // Outra aba abriu o banco local numa versão nova (app atualizado): esta aba perdeu a conexão e não grava
+  // mais. Não é falha do disco (o store não dispara onPersistError) — basta recarregar.
+  const showVersionChange = (info) =>
+    toast(info && info.newVersion == null
+      ? 'Os dados locais foram apagados em outra aba. Recarregue para continuar.'
+      : 'Uma versão nova do app foi aberta em outra aba.', {
+      id: 'version-change',
+      duration: 0,
+      tone: 'warn',
+      action: { label: 'Recarregar', onclick: () => reloadPage(app) },
+    });
+  if (app.store && 'onVersionChange' in app.store) {
+    const prevVersionHandler = app.store.onVersionChange;
+    app.store.onVersionChange = (info) => {
+      if (typeof prevVersionHandler === 'function') prevVersionHandler(info);
+      showVersionChange(info);
+    };
+    cleanups.push(() => {
+      app.store.onVersionChange = prevVersionHandler || null;
+    });
+    if (app.store.versionChanged) showVersionChange({ newVersion: -1 });
+  }
+
   const minuteTimer = win.setInterval(() => schedule(), 60000);
   const secondTimer = win.setInterval(tickTimers, 1000);
   cleanups.push(() => win.clearInterval(minuteTimer), () => win.clearInterval(secondTimer), () => router.stop());

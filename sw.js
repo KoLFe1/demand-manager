@@ -78,11 +78,20 @@ function remember(request, response) {
     });
 }
 
+/** Caminho da pasta do app (escopo do service worker), ex.: '/demand-manager/'. */
+function scopePath() {
+  const scope = (self.registration && self.registration.scope) || new URL('./', self.location.href).href;
+  return new URL(scope).pathname;
+}
+
 async function fromCache(request, navigate) {
   const cache = await caches.open(CACHE_NAME);
   const exact = await cache.match(request);
   if (exact) return exact;
   if (navigate) {
+    // Só dentro da pasta do app: '/demand-manager' (sem a barra) servido com o index.html quebraria os caminhos
+    // relativos — ali vale o redirecionamento do servidor (301 para '/demand-manager/').
+    if (!new URL(typeof request === 'string' ? request : request.url).pathname.startsWith(scopePath())) return null;
     return (await cache.match('./index.html', { ignoreSearch: true })) || (await cache.match('./', { ignoreSearch: true })) || null;
   }
   return (await cache.match(request, { ignoreSearch: true })) || null;
@@ -105,7 +114,9 @@ async function networkFirst(original) {
   const navigate = original.mode === 'navigate';
   const request = normalized(original);
   // Navegação: redirect 'manual' como a requisição original (responder uma navegação com uma resposta
-  // "redirected" é erro de rede; a opaqueredirect volta ao navegador, que segue o redirecionamento).
+  // "redirected" é erro de rede; a opaqueredirect volta ao navegador, que segue o redirecionamento — ex.:
+  // GitHub Pages manda '/demand-manager' → 301 '/demand-manager/'). Ela nunca vai para o cache (remember só
+  // guarda respostas ok do tipo 'basic').
   const init = navigate ? { cache: 'no-cache', redirect: 'manual' } : { cache: 'no-cache' };
   const network = fetch(request, init).then((response) => {
     remember(request, response);

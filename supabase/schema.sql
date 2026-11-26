@@ -1,11 +1,11 @@
 -- =============================================================================
---  Demand Manager — banco de dados no Supabase                (esquema versão 2)
+--  Demand Manager — banco de dados no Supabase                (esquema versão 3)
 -- =============================================================================
 --
 --  COMO USAR
 --    1. No painel do Supabase abra "SQL Editor" → "New query".
 --    2. Cole este arquivo INTEIRO e clique em "Run".
---    3. O resultado deve mostrar: "Demand Manager: banco pronto (versão 2)".
+--    3. O resultado deve mostrar: "Demand Manager: banco pronto (versão 3)".
 --
 --  O editor pode avisar que a consulta tem operações "destrutivas" (drop policy /
 --  drop trigger). É esperado: o script apenas recria as regras de acesso e os
@@ -110,6 +110,7 @@ alter table public.dm_demands
   add column if not exists waiting_on       text,
   add column if not exists sort_order       double precision default 0,
   add column if not exists archived_at      timestamptz,
+  add column if not exists follow_up_date   date,
   add column if not exists objective        text,
   add column if not exists deliverables     text,
   add column if not exists next_action      text,
@@ -148,6 +149,8 @@ alter table public.dm_tasks
   add column if not exists archived_at      timestamptz,
   add column if not exists weight           double precision,
   add column if not exists required         boolean          default true,
+  add column if not exists follow_up_date   date,
+  add column if not exists recurrence       jsonb,
   add column if not exists created_at       timestamptz      default now(),
   add column if not exists updated_at       timestamptz      default now(),
   add column if not exists deleted_at       timestamptz,
@@ -232,6 +235,26 @@ alter table public.dm_notes
   add column if not exists field_ts    jsonb       not null default '{}'::jsonb,
   add column if not exists server_seq  bigint      not null default 0;
 
+-- Links (URL ou caminho de arquivo/pasta) de projeto/demanda/tarefa (entity_type + entity_id). Versão 3.
+create table if not exists public.dm_links (
+  id uuid not null default gen_random_uuid(),
+  constraint dm_links_pkey primary key (id)
+);
+alter table public.dm_links
+  add column if not exists id          uuid             not null default gen_random_uuid(),
+  add column if not exists user_id     uuid             not null default auth.uid(),
+  add column if not exists entity_type text,
+  add column if not exists entity_id   uuid,
+  add column if not exists label       text,
+  add column if not exists target      text,
+  add column if not exists kind        text,
+  add column if not exists sort_order  double precision default 0,
+  add column if not exists created_at  timestamptz      default now(),
+  add column if not exists updated_at  timestamptz      default now(),
+  add column if not exists deleted_at  timestamptz,
+  add column if not exists field_ts    jsonb            not null default '{}'::jsonb,
+  add column if not exists server_seq  bigint           not null default 0;
+
 -- Histórico imutável (auditoria): só recebe inclusões; não tem field_ts.
 create table if not exists public.dm_activity_log (
   id uuid not null default gen_random_uuid(),
@@ -259,6 +282,7 @@ comment on table public.dm_task_dependencies is 'Demand Manager: dependências e
 comment on table public.dm_time_entries      is 'Demand Manager: apontamentos de tempo';
 comment on table public.dm_week_items        is 'Demand Manager: planejamento semanal';
 comment on table public.dm_notes             is 'Demand Manager: observações';
+comment on table public.dm_links             is 'Demand Manager: links (URL ou caminho)';
 comment on table public.dm_activity_log      is 'Demand Manager: histórico imutável (somente inclusão)';
 
 
@@ -283,6 +307,7 @@ begin
         ('dm_time_entries',      'user_id',       'auth.users',         'cascade'),
         ('dm_week_items',        'user_id',       'auth.users',         'cascade'),
         ('dm_notes',             'user_id',       'auth.users',         'cascade'),
+        ('dm_links',             'user_id',       'auth.users',         'cascade'),
         ('dm_activity_log',      'user_id',       'auth.users',         'cascade'),
         -- hierarquia: o vínculo opcional é desfeito; o que não existe sem a tarefa vai junto
         ('dm_demands',           'project_id',    'public.dm_projects', 'set null'),
@@ -322,6 +347,7 @@ create index if not exists dm_task_dependencies_user_id_server_seq_idx on public
 create index if not exists dm_time_entries_user_id_server_seq_idx      on public.dm_time_entries      (user_id, server_seq);
 create index if not exists dm_week_items_user_id_server_seq_idx        on public.dm_week_items        (user_id, server_seq);
 create index if not exists dm_notes_user_id_server_seq_idx             on public.dm_notes             (user_id, server_seq);
+create index if not exists dm_links_user_id_server_seq_idx             on public.dm_links             (user_id, server_seq);
 create index if not exists dm_activity_log_user_id_server_seq_idx      on public.dm_activity_log      (user_id, server_seq);
 
 -- Número legível: único por usuário (garantia final; quem numera é o gatilho dm_assign_seq).
@@ -519,13 +545,15 @@ $fn$;
 -- Versão deste esquema (igual a SCHEMA_VERSION em js/data/schema.js).
 --   1  versão inicial
 --   2  server_seq numerado sob a trava do usuário (o cursor de sincronização não pula linhas)
+--   3  tarefas: recurrence (repetição) e follow_up_date ("Cobrar em"); demandas: follow_up_date;
+--      tabela nova dm_links. Rodar este script num banco versão 2 só acrescenta (dados mantidos).
 create or replace function public.dm_schema_version()
 returns integer
 language sql
 immutable
 set search_path = ''
 as $fn$
-  select 2
+  select 3
 $fn$;
 
 comment on function public.dm_schema_version() is 'Demand Manager: versão instalada do esquema do banco';
@@ -538,7 +566,8 @@ comment on function public.dm_schema_version() is 'Demand Manager: versão insta
 do $do$
 declare
   mutable  constant text[] := array['dm_settings', 'dm_projects', 'dm_demands', 'dm_tasks',
-                                    'dm_task_dependencies', 'dm_time_entries', 'dm_week_items', 'dm_notes'];
+                                    'dm_task_dependencies', 'dm_time_entries', 'dm_week_items', 'dm_notes',
+                                    'dm_links'];
   numbered constant text[] := array['dm_demands', 'dm_tasks'];
   history  constant text   := 'dm_activity_log';
   t        text;

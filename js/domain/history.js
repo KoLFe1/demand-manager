@@ -36,6 +36,8 @@ export const FIELD_LABELS = Object.freeze({
   required: 'Obrigatória',
   blocked_reason: 'Motivo do bloqueio',
   waiting_on: 'Aguardando',
+  follow_up_date: 'Cobrar em',
+  recurrence: 'Repetição',
   project_id: 'Projeto',
   demand_id: 'Demanda',
   parent_id: 'Tarefa pai',
@@ -214,6 +216,7 @@ export function formatFieldValue(field, value, ctx = {}) {
       return formatMinutes(value);
     case 'due_date':
     case 'planned_start':
+    case 'follow_up_date':
       return formatDay(value, c.today);
     case 'actual_start':
     case 'completed_at':

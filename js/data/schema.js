@@ -9,7 +9,7 @@
 //   'lww'    -> registro mutável; conflito resolvido campo a campo pelo carimbo mais novo (field_ts)
 //   'append' -> registro imutável (somente inserção); usado no histórico/auditoria
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /** Nome do banco IndexedDB = DB_PREFIX + sufixo (ex.: "dm-local", "dm-<id do usuário>"). */
 export const DB_PREFIX = 'dm-';
@@ -39,6 +39,7 @@ const WORK_ITEM = {
   waiting_on: f('text'),
   sort_order: f('number', { default: 0 }),
   archived_at: TS,
+  follow_up_date: f('date'), // "Cobrar em": dia de cobrar quem está devendo um retorno (v3)
 };
 
 /**
@@ -111,6 +112,7 @@ export const TABLES = Object.freeze([
       ...WORK_ITEM,
       weight: f('number'), // peso (%) no progresso do pai; null = distribuição igualitária
       required: f('bool', { default: true }), // tarefa obrigatória entra no cálculo de progresso
+      recurrence: f('json'), // regra de repetição; null = não se repete (v3)
       ...COMMON,
     },
   },
@@ -181,6 +183,24 @@ export const TABLES = Object.freeze([
       entity_type: f('text', { required: true }), // 'demand' | 'task' | 'project'
       entity_id: f('uuid', { required: true }),
       body: f('text'),
+      ...COMMON,
+    },
+  },
+  {
+    name: 'links',
+    remote: 'dm_links',
+    mode: 'lww',
+    idField: 'id',
+    onConflict: 'id',
+    softDelete: true,
+    fields: {
+      id: ID,
+      entity_type: f('text', { required: true }), // 'demand' | 'task' | 'project'
+      entity_id: f('uuid', { required: true }),
+      label: f('text'),
+      target: f('text', { required: true }), // URL ou caminho de arquivo/pasta
+      kind: f('text'), // 'url' | 'path' | ...
+      sort_order: f('number', { default: 0 }),
       ...COMMON,
     },
   },

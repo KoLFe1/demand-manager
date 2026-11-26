@@ -177,6 +177,10 @@ function maxStamp(fieldTs) {
  *     no backup é excluído logicamente), para o servidor e os outros aparelhos ficarem iguais ao backup
  *   - `wipe()` → Promise; `close()` → Promise
  *   - `onPersistError` (atribuível): chamado com o erro quando uma gravação no IndexedDB falha
+ *   - `onVersionChange` (atribuível): chamado com `{ oldVersion, newVersion }` quando outra aba abre o
+ *     banco numa versão nova (ou o apaga, newVersion = null). A conexão desta aba já foi fechada:
+ *     daqui em diante as gravações falham SEM acionar `onPersistError` — a aba precisa ser recarregada
+ *   - `versionChanged` → true depois desse evento
  *   - `persistError` → a primeira falha de gravação desta sessão (ou null): a partir dela a memória
  *     pode ter o que o disco não tem, até a página ser recarregada
  *   - `busy()` → há gravações na fila do IndexedDB? (enquanto houver, fechar a página pede confirmação)
@@ -302,8 +306,30 @@ export async function createStore({ dbName, clock = createClock(), now = () => n
 
   /** Primeira falha de gravação no IndexedDB desta sessão (a memória deixou de bater com o disco). */
   let persistError = null;
+  /** Outra aba pediu uma versão nova do banco (ou o apagou): esta conexão foi fechada por idb.js. */
+  let versionChanged = false;
+
+  db.addEventListener('versionchange', (ev) => {
+    if (closed) return;
+    versionChanged = true;
+    const info = { oldVersion: ev ? ev.oldVersion : SCHEMA_VERSION, newVersion: ev && ev.newVersion != null ? ev.newVersion : null };
+    console.warn(`[store ${dbName}] Outra aba abriu o banco local numa versão nova; esta aba precisa ser recarregada.`, info);
+    if (typeof store.onVersionChange === 'function') {
+      try {
+        store.onVersionChange(info);
+      } catch (e) {
+        console.error(`[store ${dbName}] Erro em onVersionChange:`, e);
+      }
+    }
+  });
 
   function reportPersistError(err) {
+    if (versionChanged) {
+      // Esperado: a conexão foi fechada para a outra aba atualizar o banco. O aviso já é o de
+      // onVersionChange ("recarregar"); não é falha do disco, então não dispara o alarme de persistência.
+      console.warn(`[store ${dbName}] Gravação recusada depois da troca de versão do banco (aba desatualizada):`, err);
+      return;
+    }
     if (!persistError) persistError = err || new Error('Falha ao gravar no IndexedDB.');
     console.error(`[store ${dbName}] Falha ao gravar no IndexedDB:`, err);
     if (typeof store.onPersistError === 'function') {
@@ -1284,6 +1310,11 @@ export async function createStore({ dbName, clock = createClock(), now = () => n
     onPersistError: null,
     get persistError() {
       return persistError;
+    },
+    /** Atribua uma função para ser avisado quando outra aba abrir o banco numa versão nova. */
+    onVersionChange: null,
+    get versionChanged() {
+      return versionChanged;
     },
     busy: () => inFlight > 0,
     get,

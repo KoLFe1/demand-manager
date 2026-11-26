@@ -75,10 +75,12 @@ const EDITABLE = Object.freeze({
   demand: new Set([
     'name', 'description', 'project_id', 'status', 'priority', 'planned_start', 'due_date', 'estimate_minutes', 'owner', 'tags',
     'blocked_reason', 'waiting_on', 'objective', 'deliverables', 'next_action', 'category', 'sort_order', 'actual_start',
+    'follow_up_date',
   ]),
   task: new Set([
     'name', 'description', 'demand_id', 'parent_id', 'status', 'priority', 'planned_start', 'due_date', 'estimate_minutes', 'owner', 'tags',
     'blocked_reason', 'waiting_on', 'weight', 'required', 'sort_order', 'actual_start',
+    'follow_up_date',
   ]),
 });
 
@@ -340,6 +342,7 @@ export function createCommands(app) {
         return requireStatus(list, value).id;
       case 'planned_start':
       case 'due_date':
+      case 'follow_up_date':
         return dateOrNull(field, value);
       case 'estimate_minutes':
         if (value === null || value === undefined || value === '') return null;
@@ -647,6 +650,9 @@ export function createCommands(app) {
     } else if (tr.from.category === 'waiting' && row.waiting_on) {
       patch.waiting_on = null;
     }
+    // Concluída ou cancelada: não há mais o que cobrar — "Cobrar em" é limpo (auditado logo abaixo).
+    const clearsFollowUp = (tr.to.category === 'done' || tr.to.category === 'cancelled') && !!row.follow_up_date;
+    if (clearsFollowUp) patch.follow_up_date = null;
     if (type === 'demand' && opts.auto !== true && !isInFlightCategory(tr.to.category) && tr.to.category !== 'done' && undoesAutoStart(row, tr.to.id)) {
       patch.actual_start = null; // "Desfazer" do início automático: a demanda volta a não ter início real
     }
@@ -659,6 +665,7 @@ export function createCommands(app) {
 
     result.entity = store.update(table, row.id, patch);
     log(statusEvent(type, row, tr, { nowIso: now, deviceId: app.deviceId, reason: reason || undefined, auto: opts.auto === true }));
+    if (clearsFollowUp) auditDiff(type, row, { follow_up_date: null }, { auto: true, cause: tr.to.category });
     if (type === 'task') taskStatusEffects(result.entity, tr, result, list, opts);
     else demandStatusEffects(result.entity, tr, result, list);
     return result;
@@ -770,6 +777,7 @@ export function createCommands(app) {
     const started = isInFlightCategory(category) || category === 'done';
     const row = store.insert('demands', {
       ...values,
+      follow_up_date: category === 'done' || category === 'cancelled' ? null : values.follow_up_date || null,
       seq: nextSeq('demands'),
       actual_start: values.actual_start || (started ? now : null),
       completed_at: category === 'done' ? now : null,
@@ -786,6 +794,7 @@ export function createCommands(app) {
     const started = isInFlightCategory(category) || category === 'done';
     const row = store.insert('tasks', {
       ...values,
+      follow_up_date: category === 'done' || category === 'cancelled' ? null : values.follow_up_date || null,
       seq: nextSeq('tasks'),
       actual_start: values.actual_start || (started ? now : null),
       completed_at: category === 'done' ? now : null,

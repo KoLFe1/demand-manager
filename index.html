@@ -60,7 +60,9 @@
   // Vigia da abertura: erro num módulo importado por main.js acontece antes de boot() e a tela de erro do boot
   // nunca aparece. Se um script/módulo falhar ao carregar, ou se em 10 s o app não ficar pronto (DM.ready), troca
   // a abertura por um aviso com "Recarregar" e "Limpar cache e recarregar". Só age enquanto a abertura
-  // (.boot-splash) ainda está na tela: a casca e a tela de erro do boot a substituem.
+  // (.boot-splash) ainda está na tela: a casca e a tela de erro do boot a substituem. Se o app terminar de abrir
+  // depois do aviso de demora, o aviso some sozinho. "Limpar cache" apaga SÓ os caches 'dm-shell*' e o service
+  // worker — nunca o IndexedDB nem o localStorage (os dados ficam).
   (function () {
     var done = false;
     function show(loadError) {
@@ -70,15 +72,16 @@
       done = true;
       var box = document.createElement('div');
       box.className = 'boot-error';
-      box.setAttribute('role', 'alert');
+      box.setAttribute('role', loadError ? 'alert' : 'status');
       box.setAttribute('data-boot-watchdog', loadError ? 'load' : 'timeout');
       box.innerHTML = '<div class="boot-error-card"><div class="boot-error-title"></div><p class="boot-error-hint"></p>' +
         '<div class="boot-error-actions" style="gap:8px;flex-wrap:wrap"><button type="button" class="btn">Limpar cache e recarregar</button>' +
         '<button type="button" class="btn btn-primary">Recarregar</button></div></div>';
-      box.querySelector('.boot-error-title').textContent = loadError ? 'Não foi possível carregar o Demand Manager' : 'O Demand Manager está demorando para abrir';
+      box.querySelector('.boot-error-title').textContent = loadError ? 'Não foi possível carregar o Demand Manager' : 'Está demorando mais que o normal…';
       box.querySelector('.boot-error-hint').textContent = loadError
         ? 'Um arquivo do aplicativo falhou ao carregar (talvez uma atualização pela metade ou falta de conexão).'
-        : 'Verifique a conexão e recarregue. Se o problema continuar, limpe o cache do aplicativo (seus dados não são apagados).';
+        : 'O Demand Manager ainda está abrindo — esta tela some sozinha quando terminar. Se não sair daqui, recarregue; ' +
+          'se continuar, limpe o cache do aplicativo (seus dados não são apagados).';
       var buttons = box.querySelectorAll('button');
       buttons[1].onclick = function () { location.reload(); };
       buttons[0].onclick = function () {
@@ -94,6 +97,13 @@
         Promise.all(jobs).catch(function () {}).then(function () { location.reload(); });
       };
       root.replaceChildren(box);
+      if (!loadError) {
+        // O app pode terminar de abrir depois do aviso (rede lenta): aí o aviso sai sozinho.
+        var watch = setInterval(function () {
+          if (!box.isConnected) { clearInterval(watch); return; }
+          if (window.DM && window.DM.ready === true) { clearInterval(watch); box.remove(); }
+        }, 250);
+      }
     }
     // Erros antes de o boot começar (window.DM ainda não existe): módulo que não carregou (evento no <script>,
     // capturado) ou exceção ao avaliar um módulo. config.js é opcional e não conta.
@@ -104,7 +114,7 @@
       if (/\/config\.js(\?|$)/.test(src)) return;
       setTimeout(function () { if (!window.DM) show(true); }, 1500);
     }, true);
-    setTimeout(function () { show(false); }, 10000);
+    setTimeout(function () { show(false); }, window.__DM_BOOT_TIMEOUT_MS__ || 10000);
   })();
 </script>
 <script src="config.js"></script>
