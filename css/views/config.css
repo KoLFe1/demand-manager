@@ -342,3 +342,52 @@
     text-align: left;
   }
 }
+
+/* modelos de demanda */
+.v-config-tpl-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+.v-config-tpl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+}
+
+.v-config-tpl + .v-config-tpl {
+  border-top: 1px solid var(--border);
+}
+
+.v-config-tpl-icon {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.v-config-tpl-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 160px;
+  min-width: 0;
+  line-height: var(--lh-tight);
+}
+
+.v-config-tpl-meta {
+  margin-top: 2px;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+}
+
+.v-config-tpl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  margin-left: auto;
+}

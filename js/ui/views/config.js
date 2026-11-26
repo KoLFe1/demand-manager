@@ -16,6 +16,7 @@ import { icon } from '../kit/icons.js';
 import { confirmDialog, openModal, toast } from '../kit/overlays.js';
 import { syncDetails } from '../shell.js';
 import { rekeyBackup } from '../../boot.js';
+import { deleteTemplate, listTemplates, openTemplateDialog, renameTemplate } from '../templates.js';
 
 const TRASH_LIMIT = 30;
 
@@ -24,6 +25,7 @@ const SECTIONS = Object.freeze([
   { id: 'conta', label: 'Conta e sincronização', icon: 'cloud' },
   { id: 'preferencias', label: 'Preferências', icon: 'settings' },
   { id: 'dados', label: 'Dados', icon: 'download' },
+  { id: 'modelos', label: 'Modelos', icon: 'copy' },
   { id: 'status', label: 'Status', icon: 'circle-dot' },
   { id: 'sobre', label: 'Sobre', icon: 'info' },
 ]);
@@ -649,6 +651,43 @@ function renderData(app) {
   );
 }
 
+function renderTemplates(app) {
+  const list = listTemplates(app);
+  return section(
+    'modelos',
+    'Modelos',
+    'Modelos criam uma demanda já com tarefas, subtarefas, durações e dependências. Para guardar um novo, use “Salvar como modelo…” no menu de uma demanda.',
+    h(
+      'ul',
+      { class: 'v-config-tpl-list' },
+      list.map((t) =>
+        h(
+          'li',
+          { key: t.id, class: 'v-config-tpl', 'data-template': t.id },
+          h('span', { class: 'v-config-tpl-icon' }, icon(t.builtin ? 'lock' : 'copy', { size: 14 })),
+          h(
+            'span',
+            { class: 'v-config-tpl-main' },
+            h('span', { class: 'v-config-tpl-name truncate' }, t.name),
+            h('span', { class: 'v-config-tpl-meta' }, `${plural(t.tasks.length, 'tarefa', 'tarefas')}${t.builtin ? ' · embutido (somente leitura)' : ''}`),
+          ),
+          h(
+            'span',
+            { class: 'v-config-tpl-actions' },
+            button({ label: 'Usar', icon: 'plus', size: 'sm', variant: 'ghost', onclick: () => openTemplateDialog(app, { templateId: t.id }), attrs: { 'data-action': 'use-template' } }),
+            t.builtin
+              ? null
+              : [
+                  button({ label: 'Renomear', icon: 'pencil', size: 'sm', variant: 'ghost', onclick: () => renameTemplate(app, t), attrs: { 'data-action': 'rename-template' } }),
+                  button({ label: 'Excluir', icon: 'trash', size: 'sm', variant: 'ghost', onclick: () => deleteTemplate(app, t), attrs: { 'data-action': 'delete-template' } }),
+                ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 function renderStatuses(app) {
   const list = app.sel.statuses();
   return section(
@@ -710,7 +749,7 @@ export default {
     return h(
       'div',
       { class: cx('v-config', ctx && ctx.isMobile && 'is-mobile') },
-      h('div', { class: 'v-config-inner' }, renderToc(), renderAccountSection(app), renderPreferences(app), renderData(app), renderStatuses(app), renderAbout(app)),
+      h('div', { class: 'v-config-inner' }, renderToc(), renderAccountSection(app), renderPreferences(app), renderData(app), renderTemplates(app), renderStatuses(app), renderAbout(app)),
     );
   },
 };

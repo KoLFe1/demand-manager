@@ -32,6 +32,7 @@ import { NAV_SHORTCUTS, openPalette } from './palette.js';
 import { panels } from './panels/index.js';
 import { openProjectDialog, openProjectMenu, projectDot } from './projects.js';
 import { openQuickCreate } from './quick-create.js';
+import { openTemplateDialog } from './templates.js';
 import { entityActions, openEntityMenu } from './shared/entity.js';
 import { VIEW_SECTIONS, viewById, viewByPath, views } from './views/index.js';
 
@@ -473,6 +474,7 @@ export function startShell(app, root) {
       [
         { label: 'Tarefa', icon: 'circle', kbd: 'N', onclick: () => ui.quickCreate('task') },
         { label: 'Demanda', icon: 'layers', kbd: 'Shift+N', onclick: () => ui.quickCreate('demand') },
+        { label: 'Demanda a partir de modelo…', icon: 'copy', onclick: () => openTemplateDialog(app) },
         { separator: true },
         { label: 'Projeto', icon: 'folder', onclick: () => ui.createProject() },
       ],

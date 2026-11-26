@@ -16,6 +16,7 @@ import { alertBox, badge, progressBar } from '../kit/display.js';
 import { sortableItem, sortableList } from '../kit/dnd.js';
 import { icon } from '../kit/icons.js';
 import { confirmDialog } from '../kit/overlays.js';
+import { saveDemandAsTemplate } from '../templates.js';
 import { EMPTY_CHOICE, pickFromList } from '../kit/pickers.js';
 import {
   dueControl,
@@ -336,7 +337,7 @@ function renderDemand(app, id, ctx) {
           class: cx('pn-complete', status.category === 'done' && 'is-done'),
           onclick: () => entityActions.complete(app, 'demand', demand.id),
         }),
-        iconButton({ icon: 'more-horizontal', title: 'Mais ações', onclick: (ev) => openEntityMenu(app, 'demand', demand.id, ev.currentTarget), class: 'pn-menu' }),
+        iconButton({ icon: 'more-horizontal', title: 'Mais ações', onclick: (ev) => openEntityMenu(app, 'demand', demand.id, ev.currentTarget, { items: [{ label: 'Salvar como modelo…', icon: 'copy', onclick: () => saveDemandAsTemplate(app, demand.id) }] }), class: 'pn-menu' }),
       ],
     }),
     h(

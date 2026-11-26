@@ -11,6 +11,7 @@ import { emptyState } from './kit/display.js';
 import { icon } from './kit/icons.js';
 import { openModal } from './kit/overlays.js';
 import { projectDot } from './projects.js';
+import { openTemplateDialog } from './templates.js';
 import { views } from './views/index.js';
 
 const MAX_RESULTS = 12;
@@ -83,6 +84,7 @@ function commandList(app) {
   list.push(
     { id: 'new:task', group: 'Criar', label: 'Nova tarefa', keywords: 'criar adicionar tarefa', icon: 'plus', keys: 'n', run: () => ui.quickCreate && ui.quickCreate('task') },
     { id: 'new:demand', group: 'Criar', label: 'Nova demanda', keywords: 'criar adicionar demanda', icon: 'plus', keys: 'shift+n', run: () => ui.quickCreate && ui.quickCreate('demand') },
+    { id: 'new:demand-template', group: 'Criar', label: 'Nova demanda a partir de modelo…', keywords: 'criar demanda modelo template recursos', icon: 'copy', keys: null, run: () => openTemplateDialog(app) },
     { id: 'new:project', group: 'Criar', label: 'Novo projeto', keywords: 'criar adicionar projeto', icon: 'folder', keys: null, run: () => ui.createProject && ui.createProject() },
   );
   if (app.sync) {

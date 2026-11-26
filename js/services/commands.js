@@ -18,7 +18,7 @@
 //   • os comandos leem direto do banco (não dos seletores memorizados): dentro de uma transação a versão do
 //     banco ainda não mudou e os seletores devolveriam dados antigos.
 
-import { addDays, diffDays, isValidDateStr, isoToDateStr, startOfWeek, timeOfIso } from '../core/dates.js';
+import { addDays, addWorkdays, countWorkdays, diffDays, isValidDateStr, isoToDateStr, startOfWeek, timeOfIso } from '../core/dates.js';
 import { ENTITY_TABLE } from '../data/schema.js';
 import { blockingPrereqs, buildGraph, dependencyRows, findCycles, validateNewDependency, wouldCreateCycle } from '../domain/dependencies.js';
 import { createdEvent, diffToEvents, statusEvent } from '../domain/history.js';
@@ -30,6 +30,8 @@ import { DEFAULT_FOLLOWUP_DAYS, isOtherOwner, nextFollowUpDate, personName, resu
 import { compareManualOrder } from '../domain/filters.js';
 import { ENTRY_SOURCE, TIMER, ValidationError, findOverlaps, formatDuration, manualEntryValues, pausePatch, resumePatch, startValues, stopPatch, timerState } from '../domain/timetracking.js';
 import { WEEK_KIND, allWeekItems, carryOverPlan, kindForNewItem } from '../domain/weekplan.js';
+import { MAX_TEMPLATES, TemplateError, availableTemplates, isBuiltinTemplate, normalizeTemplate, normalizeTemplateList, planTemplate } from '../domain/templates.js';
+import { uuid } from '../core/ids.js';
 
 /**
  * Erro de regra de negócio de um comando. `message` está em pt-BR e pode ser mostrada ao usuário.
@@ -100,6 +102,13 @@ const SETTING_RULES = Object.freeze({
   'followup.defaultDays': (v) => (Number.isInteger(v) && v >= 0 && v <= 60 ? v : undefined),
   statuses: (v) => (v === null || (Array.isArray(v) && v.every((s) => s && typeof s === 'object' && typeof s.id === 'string' && s.id)) ? v : undefined),
   'suggestions.dismissed': (v) => (Array.isArray(v) && v.every((s) => typeof s === 'string') ? v : undefined),
+  templates: (v) => {
+    try {
+      return normalizeTemplateList(v);
+    } catch {
+      return undefined;
+    }
+  },
 });
 
 const SETTING_MESSAGES = Object.freeze({
@@ -111,6 +120,7 @@ const SETTING_MESSAGES = Object.freeze({
   'followup.defaultDays': 'Informe um número inteiro de dias úteis, de 0 a 60.',
   statuses: 'A personalização de status precisa ser uma lista de status com identificador.',
   'suggestions.dismissed': 'A lista de sugestões dispensadas é inválida.',
+  templates: `Lista de modelos inválida (no máximo ${MAX_TEMPLATES} modelos de até 100 tarefas, sem chaves repetidas nem dependências em ciclo).`,
 });
 
 // ---------------------------------------------------------------------------
@@ -181,6 +191,7 @@ export function createCommands(app) {
   };
 
   function translate(error) {
+    if (error instanceof TemplateError) return new CommandError(error.code, error.message, error.data);
     if (error instanceof ValidationError) return new CommandError(error.code, error.message, { field: error.field });
     return error;
   }
@@ -830,6 +841,27 @@ export function createCommands(app) {
     }
   }
 
+  // --- modelos ----------------------------------------------------------------------------------
+  /** Modelos salvos válidos (configuração 'templates'). */
+  function savedTemplates() {
+    const row = store.get('settings', 'templates');
+    return availableTemplates(row ? row.value : null).filter((t) => !t.builtin);
+  }
+
+  function templateById(id) {
+    const row = store.get('settings', 'templates');
+    const template = availableTemplates(row ? row.value : null).find((t) => t.id === id);
+    if (!template) fail('template_not_found', 'Modelo não encontrado: ele pode ter sido excluído.', { id });
+    return template;
+  }
+
+  function editableTemplateIndex(saved, id) {
+    if (isBuiltinTemplate(id)) fail('template_builtin', 'O modelo embutido não pode ser alterado.', { id });
+    const index = saved.findIndex((t) => t.id === id);
+    if (index < 0) fail('template_not_found', 'Modelo não encontrado: ele pode ter sido excluído.', { id });
+    return index;
+  }
+
   // --- exclusão / restauração --------------------------------------------------------------------
   function markDeleted(type, row) {
     const updated = store.update(ENTITY_TABLE[type], row.id, { deleted_at: now });
@@ -1093,6 +1125,148 @@ export function createCommands(app) {
       }
       copyDependencies(map);
       return copy;
+    }),
+
+    // ----- modelos de demanda ---------------------------------------------------------------------
+    /**
+     * Cria uma demanda a partir de um modelo (embutido ou salvo em 'templates'), com tarefas, subtarefas e
+     * dependências. Responsável = 'owner.default'. Com `startDate`, as tarefas recebem início/prazo em dias úteis
+     * (planTemplate) e a demanda começa em startDate e vence no fim da última tarefa. O evento 'created' da
+     * demanda leva meta.template = { id, name }.
+     * @param {string} templateId
+     * @param {{ name?: string, project_id?: string|null, startDate?: string|null, priority?: string }} [options]
+     * @returns {object} a nova demanda
+     * @throws {CommandError} template_not_found | invalid_name | invalid_date | project_not_found | invalid_priority
+     */
+    createDemandFromTemplate: define('createDemandFromTemplate', (templateId, options) => {
+      const opts = options || {};
+      const template = templateById(templateId);
+      const startDate = dateOrNull('planned_start', opts.startDate);
+      const plan = planTemplate(template, { startDate });
+      const blank = opts.name === undefined || opts.name === null || (typeof opts.name === 'string' && !opts.name.trim());
+      const clean = cleanInput(
+        'demand',
+        { name: blank ? template.name : opts.name, project_id: opts.project_id, priority: opts.priority, planned_start: startDate ? plan.start : null, due_date: plan.end },
+        'createDemandFromTemplate',
+      );
+      const defaultOwner = app.settings.get('owner.default');
+      const meta = { template: { id: template.id, name: template.name } };
+      const demand = insertDemand(
+        {
+          tags: [],
+          ...clean,
+          status: 'backlog',
+          priority: clean.priority || DEFAULT_PRIORITY,
+          owner: typeof defaultOwner === 'string' && defaultOwner.trim() ? defaultOwner.trim() : null,
+          sort_order: nextSortOrder(store.all('demands')),
+        },
+        meta,
+      );
+      const ids = new Map();
+      const base = { tags: [], demand_id: demand.id, status: 'todo', priority: demand.priority, required: true };
+      plan.tasks.forEach((task, i) => {
+        const top = insertTask(
+          {
+            ...base,
+            name: task.name,
+            parent_id: null,
+            planned_start: task.planned_start,
+            due_date: task.due_date,
+            estimate_minutes: task.estimate_minutes === undefined ? null : task.estimate_minutes,
+            sort_order: (i + 1) * ORDER_STEP,
+          },
+          meta,
+        );
+        ids.set(task.key, top.id);
+        task.subtasks.forEach((sub, j) => insertTask({ ...base, name: sub.name, parent_id: top.id, sort_order: (j + 1) * ORDER_STEP }, meta));
+      });
+      for (const task of plan.tasks) {
+        for (const dep of task.dependsOn) {
+          store.insert('task_dependencies', { task_id: ids.get(task.key), depends_on_id: ids.get(dep), created_at: now, updated_at: now });
+          const prereq = plan.tasks.find((t) => t.key === dep);
+          event('task', ids.get(task.key), ACTIONS.DEP_ADDED, { newValue: ids.get(dep), meta: { name: prereq.name } });
+        }
+      }
+      return demand;
+    }),
+
+    /**
+     * Salva uma demanda como modelo (anexado à configuração 'templates'): tarefas de nível superior não
+     * arquivadas (com os nomes das subtarefas), deslocamentos em dias úteis a partir do menor início planejado
+     * (sem início = 0), durações, estimativas e só as dependências entre as tarefas copiadas.
+     * @param {string} demandId
+     * @param {{ name?: string, description?: string }} [options]
+     * @returns {object} o modelo salvo
+     * @throws {CommandError} not_found | too_many_templates | too_many_tasks | invalid_template
+     */
+    saveDemandAsTemplate: define('saveDemandAsTemplate', (demandId, options) => {
+      const opts = options || {};
+      const demand = requireRow('demand', demandId);
+      const tops = topTasksOf(demand.id).filter((t) => !t.archived_at).sort(bySortOrder);
+      const starts = tops.map((t) => t.planned_start).filter((d) => isValidDateStr(d)).sort();
+      const origin = starts.length ? addWorkdays(starts[0], 0) : null;
+      const keys = new Map();
+      const tasks = tops.map((task, i) => {
+        const key = `t${i + 1}`;
+        keys.set(task.id, key);
+        const start = isValidDateStr(task.planned_start) ? addWorkdays(task.planned_start, 0) : null;
+        const out = {
+          key,
+          name: task.name,
+          offsetDays: origin && start ? Math.max(0, countWorkdays(origin, start) - 1) : 0,
+          durationDays: start && isValidDateStr(task.due_date) && task.due_date >= start ? Math.max(1, countWorkdays(start, task.due_date)) : 1,
+          subtasks: subtasksOf(task.id)
+            .filter((s) => !s.archived_at)
+            .sort(bySortOrder)
+            .map((s) => ({ name: s.name })),
+          dependsOn: [],
+        };
+        if (Number.isInteger(task.estimate_minutes)) out.estimate_minutes = task.estimate_minutes;
+        return out;
+      });
+      const byKey = new Map(tasks.map((t) => [t.key, t]));
+      for (const dep of store.all('task_dependencies')) {
+        const from = keys.get(dep.task_id);
+        const to = keys.get(dep.depends_on_id);
+        if (!from || !to || from === to) continue;
+        const list = byKey.get(from).dependsOn;
+        if (!list.includes(to)) list.push(to);
+      }
+      const saved = savedTemplates();
+      if (saved.length >= MAX_TEMPLATES) fail('too_many_templates', `É possível guardar no máximo ${MAX_TEMPLATES} modelos. Exclua algum em Configurações.`, { count: saved.length });
+      const name = typeof opts.name === 'string' && opts.name.trim() ? opts.name : demand.name;
+      const description = typeof opts.description === 'string' ? opts.description : demand.description ? excerptOf(demand.description) : null;
+      const template = normalizeTemplate({ id: uuid(), name, description, tasks });
+      cmd.setSetting('templates', [...saved, template]);
+      return template;
+    }),
+
+    /**
+     * Renomeia um modelo salvo (o embutido é somente leitura).
+     * @param {string} templateId
+     * @param {string} name
+     * @returns {object} modelo atualizado
+     * @throws {CommandError} template_builtin | template_not_found | invalid_template
+     */
+    renameTemplate: define('renameTemplate', (templateId, name) => {
+      const saved = savedTemplates();
+      const index = editableTemplateIndex(saved, templateId);
+      const updated = normalizeTemplate({ ...saved[index], name });
+      cmd.setSetting('templates', saved.map((t, i) => (i === index ? updated : t)));
+      return updated;
+    }),
+
+    /**
+     * Exclui um modelo salvo (o embutido é somente leitura).
+     * @param {string} templateId
+     * @returns {object} o modelo excluído
+     * @throws {CommandError} template_builtin | template_not_found
+     */
+    deleteTemplate: define('deleteTemplate', (templateId) => {
+      const saved = savedTemplates();
+      const index = editableTemplateIndex(saved, templateId);
+      cmd.setSetting('templates', saved.filter((_, i) => i !== index));
+      return saved[index];
     }),
 
     /**
