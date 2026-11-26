@@ -2071,6 +2071,12 @@ a.pn-lk-label:hover {
   font-size: var(--fs-lg);
 }
 
+.qc-desc {
+  width: 100%;
+  max-height: 40vh;
+  resize: vertical;
+}
+
 .qc-error {
   margin-top: calc(-1 * var(--sp-2));
 }

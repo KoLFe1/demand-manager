@@ -7,7 +7,7 @@
 
 import { cx, h } from '../core/dom.js';
 import { formatDate } from '../core/dates.js';
-import { iconButton, segmented, switchInput, textInput } from './kit/controls.js';
+import { iconButton, segmented, switchInput, textArea, textInput } from './kit/controls.js';
 import { priorityBadge } from './kit/display.js';
 import { icon } from './kit/icons.js';
 import { openModal } from './kit/overlays.js';
@@ -87,6 +87,8 @@ function initialForm(app, type, defaults) {
   return {
     type: TYPES.some((t) => t.value === type) ? type : 'task',
     name: typeof d.name === 'string' ? d.name : '',
+    // descrição só aparece quando veio preenchida (ex.: captura rápida do celular); null = sem o campo
+    description: typeof d.description === 'string' ? d.description : null,
     parent_id: parent && !app.sel.parentOf(parent) ? parent.id : null,
     demand_id: app.sel.demand(demandId) ? demandId : null,
     project_id: app.sel.project(projectId) ? projectId : null,
@@ -115,7 +117,8 @@ function chipButton({ glyph, text, onclick, title, empty, disabled, className })
  * @param {object} app
  * @param {'task'|'demand'|'project'} type tipo inicial (o usuário pode trocar no diálogo)
  * @param {{ demand_id?: string, parent_id?: string, project_id?: string, status?: string, due_date?: string,
- *           priority?: string, name?: string }} [defaults] valores iniciais. Sem demand_id, usa a demanda aberta no
+ *           priority?: string, name?: string, description?: string }} [defaults] `description` (texto) mostra
+ *        o campo Descrição já preenchido (captura rápida) e é gravado ao criar. valores iniciais. Sem demand_id, usa a demanda aberta no
  *        painel; sem project_id, o projeto do filtro global (app.ui.scope.projectId).
  * @returns {Promise<object|null>} a (última) entidade criada, ou null se o usuário cancelou sem criar
  */
@@ -147,6 +150,7 @@ export function openQuickCreate(app, type = 'task', defaults = {}) {
         focusName();
         return;
       }
+      const description = typeof form.description === 'string' && form.description.trim() ? form.description.trim() : null;
       let row = null;
       try {
         if (form.type === 'task') {
@@ -158,11 +162,12 @@ export function openQuickCreate(app, type = 'task', defaults = {}) {
             priority: form.priority,
             due_date: form.due_date || null,
             status: form.status,
+            description,
           });
         } else if (form.type === 'demand') {
-          row = app.cmd.createDemand({ name, project_id: form.project_id || null, priority: form.priority, due_date: form.due_date || null, status: form.status });
+          row = app.cmd.createDemand({ name, project_id: form.project_id || null, priority: form.priority, due_date: form.due_date || null, status: form.status, description });
         } else {
-          row = app.cmd.createProject({ name, code: form.code.trim() || null, color: form.color });
+          row = app.cmd.createProject({ name, code: form.code.trim() || null, color: form.color, description });
         }
       } catch (err) {
         if (isCommandError(err)) {
@@ -195,6 +200,7 @@ export function openQuickCreate(app, type = 'task', defaults = {}) {
         form.name = '';
         form.error = null;
         if (input) input.value = '';
+        if (form.description !== null) form.description = '';
         if (form.type === 'project') form.code = '';
         refresh();
         focusName();
@@ -400,6 +406,21 @@ export function openQuickCreate(app, type = 'task', defaults = {}) {
           },
           onenter: (text, ev) => create({ open: ev.ctrlKey || ev.metaKey }),
         }),
+        form.description !== null
+          ? textArea({
+              value: form.description,
+              rows: 3,
+              autoGrow: true,
+              placeholder: 'Descrição',
+              ariaLabel: 'Descrição',
+              maxlength: 10000,
+              class: 'qc-desc',
+              oninput: (text) => {
+                form.description = text;
+              },
+              onsubmit: () => create({ open: true }),
+            })
+          : null,
         form.error ? h('p', { class: 'field-error qc-error', role: 'alert' }, icon('alert-circle', { size: 12 }), h('span', null, form.error)) : null,
         h('div', { class: 'qc-fields' }, fieldsFor()),
         scopeHint(),

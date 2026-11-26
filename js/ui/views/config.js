@@ -15,7 +15,8 @@ import { alertBox, emptyState, statusBadge } from '../kit/display.js';
 import { icon } from '../kit/icons.js';
 import { confirmDialog, openModal, toast } from '../kit/overlays.js';
 import { syncDetails } from '../shell.js';
-import { rekeyBackup } from '../../boot.js';
+import { bookmarkletCode, captureUrl, rekeyBackup } from '../../boot.js';
+import { copyToClipboard } from '../kit/clipboard.js';
 import { openIcsDialog } from '../ics-export.js';
 import { DIGEST_PREF_ENABLED, digestEnabled, digestNotifyEnabled, notificationPermission, openDigestModal, requestDigestNotifications } from '../digest.js';
 import { DEFAULT_FOLLOWUP_DAYS } from '../../domain/followup.js';
@@ -31,6 +32,7 @@ const SECTIONS = Object.freeze([
   { id: 'modelos', label: 'Modelos', icon: 'copy' },
   { id: 'lembretes', label: 'Lembretes', icon: 'bell' },
   { id: 'calendario-externo', label: 'Calendário externo', icon: 'calendar' },
+  { id: 'captura', label: 'Captura rápida', icon: 'share' },
   { id: 'status', label: 'Status', icon: 'circle-dot' },
   { id: 'sobre', label: 'Sobre', icon: 'info' },
 ]);
@@ -773,6 +775,65 @@ function renderReminders(app) {
   );
 }
 
+/** Endereço do app (sem query nem fragmento): base dos links de captura. */
+function appBaseUrl() {
+  try {
+    return { origin: location.origin, pathname: location.pathname };
+  } catch {
+    return { origin: '', pathname: '/' };
+  }
+}
+
+function renderCapture() {
+  const step = (title, ...text) => h('li', { class: 'v-config-ics-step' }, h('strong', null, title), ' ', ...text);
+  const { origin, pathname } = appBaseUrl();
+  const shortcut = captureUrl(origin, pathname);
+  const bookmarklet = bookmarkletCode(`${origin}${pathname}`);
+  const copy = async () => {
+    const ok = await copyToClipboard(shortcut);
+    toast(ok ? 'Endereço copiado. No Atalho, acrescente a variável “Entrada” no fim.' : 'Não foi possível copiar: selecione o endereço e copie manualmente.', { tone: ok ? 'success' : 'warn' });
+  };
+  return section(
+    'captura',
+    'Captura rápida',
+    'Transforme um e-mail, uma mensagem ou uma página em tarefa sem digitar: o app abre a “Nova tarefa” já preenchida (nome e descrição) e você só confirma. Nada é criado sozinho.',
+    h(
+      'ul',
+      { class: 'v-config-ics-steps' },
+      step('Android:', 'instale o app (menu do navegador → “Adicionar à tela inicial” / “Instalar app”). Depois, no e-mail, WhatsApp ou navegador, toque em Compartilhar → Demand Manager.'),
+      step('iPhone:', 'no app Atalhos, crie um atalho que aceite Texto na folha de compartilhamento com a ação “Abrir URL” e o endereço abaixo seguido da variável Entrada (', h('code', null, '…&text=[Entrada]'), '). Depois use Compartilhar → nome do atalho.'),
+      step('Computador:', 'arraste o botão “+ Demand Manager” para a barra de favoritos. Em qualquer página, selecione um trecho (opcional) e clique no favorito: o título, a seleção e o endereço da página viram a tarefa.'),
+    ),
+    settingRow(
+      'Endereço para o Atalho (iPhone)',
+      h('code', { class: 'v-config-capture-url', 'data-field': 'capture-url' }, `${shortcut}[Entrada]`),
+      button({ label: 'Copiar', icon: 'copy', size: 'sm', attrs: { 'data-action': 'copy-capture-url' }, onclick: copy }),
+      { key: 'capture-url', stack: true },
+    ),
+    settingRow(
+      'Favorito para o computador',
+      'Arraste para a barra de favoritos (clicar aqui não faz nada).',
+      h(
+        'a',
+        {
+          class: 'btn btn-sm btn-default v-config-bookmarklet',
+          href: bookmarklet,
+          'data-field': 'bookmarklet',
+          title: 'Arraste para a barra de favoritos',
+          draggable: 'true',
+          onclick: (ev) => {
+            ev.preventDefault();
+            toast('Arraste este botão para a barra de favoritos do navegador.');
+          },
+        },
+        icon('zap', { size: 14 }),
+        h('span', null, '+ Demand Manager'),
+      ),
+      { key: 'bookmarklet' },
+    ),
+  );
+}
+
 function renderExternalCalendar(app) {
   const step = (title, text) => h('li', { class: 'v-config-ics-step' }, h('strong', null, title), ' ', text);
   return section(
@@ -862,7 +923,7 @@ export default {
     return h(
       'div',
       { class: cx('v-config', ctx && ctx.isMobile && 'is-mobile') },
-      h('div', { class: 'v-config-inner' }, renderToc(), renderAccountSection(app), renderPreferences(app), renderData(app), renderTemplates(app), renderReminders(app), renderExternalCalendar(app), renderStatuses(app), renderAbout(app)),
+      h('div', { class: 'v-config-inner' }, renderToc(), renderAccountSection(app), renderPreferences(app), renderData(app), renderTemplates(app), renderReminders(app), renderExternalCalendar(app), renderCapture(), renderStatuses(app), renderAbout(app)),
     );
   },
 };

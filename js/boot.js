@@ -50,6 +50,107 @@ export function appResourceUrls(origin, href, entries = []) {
   return [...urls];
 }
 
+// ---------------------------------------------------------------------------
+// Captura rápida: "Compartilhar → Demand Manager" (share_target do manifest), Atalho do iPhone e favorito
+// (bookmarklet) abrem o app com ?title=&text=&url= (ou ?capture=1&text=…). O boot lê esses parâmetros, tira-os
+// JÁ da barra de endereço (recarregar não abre de novo; o texto não fica no histórico) e abre a criação rápida
+// preenchida — nada é criado sem o usuário confirmar.
+// ---------------------------------------------------------------------------
+
+/** Parâmetros da captura (os demais, como db/demo, ficam na URL). */
+export const CAPTURE_PARAMS = Object.freeze(['title', 'text', 'url', 'capture']);
+
+/** Tamanho máximo do nome sugerido pela captura. */
+export const CAPTURE_NAME_MAX = 120;
+
+/**
+ * Lê os parâmetros de captura da query.
+ * @param {string|URLSearchParams} search location.search
+ * @returns {{ title: string, text: string, url: string }|null} null quando não é uma captura
+ */
+export function readCaptureParams(search) {
+  const params = search instanceof URLSearchParams ? search : new URLSearchParams(typeof search === 'string' ? search : '');
+  const get = (key) => (params.get(key) || '').replace(/\r\n?/g, '\n').trim();
+  const value = { title: get('title'), text: get('text'), url: get('url') };
+  if (params.get('capture') === '1' || value.title || value.text || value.url) return value;
+  return null;
+}
+
+/**
+ * Query sem os parâmetros de captura (mantém a ordem dos outros).
+ * @param {string} search location.search
+ * @returns {string} '' ou '?db=x…'
+ */
+export function stripCaptureParams(search) {
+  const params = new URLSearchParams(typeof search === 'string' ? search : '');
+  for (const key of CAPTURE_PARAMS) params.delete(key);
+  const rest = params.toString();
+  return rest ? `?${rest}` : '';
+}
+
+/**
+ * Valores iniciais da criação rápida a partir da captura: nome = título ou 1ª linha do texto (até 120 caracteres);
+ * descrição = o resto do texto + o endereço numa linha própria (sem repetir um endereço que já está no texto).
+ * @param {{ title?: string, text?: string, url?: string }} capture
+ * @returns {{ name: string, description: string }}
+ */
+export function capturePrefill(capture) {
+  const c = capture && typeof capture === 'object' ? capture : {};
+  const clean = (v) => (typeof v === 'string' ? v.replace(/\r\n?/g, '\n').trim() : '');
+  const title = clean(c.title).replace(/\s+/g, ' ');
+  const text = clean(c.text);
+  const url = clean(c.url);
+  let name = title;
+  let rest = text;
+  if (!name && text) {
+    const lines = text.split('\n');
+    name = lines[0].trim();
+    rest = lines.slice(1).join('\n').trim();
+  }
+  if (!name && url) name = url;
+  if (name.length > CAPTURE_NAME_MAX) {
+    // o nome é cortado, mas nada se perde: a linha inteira abre a descrição
+    rest = [name, rest].filter(Boolean).join('\n');
+    name = `${name.slice(0, CAPTURE_NAME_MAX - 1).trimEnd()}…`;
+  }
+  const parts = [];
+  if (rest) parts.push(rest);
+  if (url && !rest.includes(url)) parts.push(url);
+  return { name, description: parts.join('\n') };
+}
+
+/**
+ * Endereço para o Atalho do iPhone ("Abrir URL"): termina em `text=`, onde o atalho acrescenta a Entrada.
+ * @param {string} origin location.origin
+ * @param {string} pathname location.pathname
+ */
+export function captureUrl(origin, pathname) {
+  return `${origin}${pathname}?capture=1&text=`;
+}
+
+/**
+ * Código do favorito (bookmarklet) que abre o app com o título da página, o texto selecionado e o endereço.
+ * @param {string} appUrl endereço do app (origin + pathname)
+ * @returns {string} 'javascript:…'
+ */
+export function bookmarkletCode(appUrl) {
+  const base = JSON.stringify(String(appUrl));
+  return (
+    'javascript:(function(){var e=encodeURIComponent,s=String(window.getSelection?getSelection():"").trim().slice(0,3000);' +
+    `window.open(${base}+"?capture=1&title="+e(document.title.slice(0,300))+"&text="+e(s)+"&url="+e(location.href),"_blank");})();`
+  );
+}
+
+/** Tira os parâmetros de captura da barra de endereço (e do histórico), mantendo os outros e o fragmento. */
+function clearCaptureParams(win) {
+  try {
+    const { pathname, search, hash } = win.location;
+    win.history.replaceState(win.history.state, '', `${pathname}${stripCaptureParams(search)}${hash}`);
+  } catch {
+    /* sem histórico: segue */
+  }
+}
+
 /** Chave (no armazenamento do dispositivo) da configuração do Supabase gravada pela tela de Configurações. */
 export const CONFIG_KEY = 'dm.config';
 
@@ -739,6 +840,9 @@ export async function boot({ root, params = new URLSearchParams(globalThis.locat
   }
   try {
     if (!root) throw new Error('Contêiner do aplicativo (#app) não encontrado na página.');
+    // Captura rápida (compartilhar/atalho/favorito): o texto sai da barra de endereço antes de qualquer outra coisa.
+    const capture = readCaptureParams(win.location ? win.location.search : '');
+    if (capture) clearCaptureParams(win);
     const namespace = cleanNamespace(params.get('db'));
     const demo = params.get('demo') === '1';
     // Só vale com ?db=NOME: o espaço isolado passa a ter um banco por conta, como um navegador de verdade.
@@ -863,6 +967,7 @@ export async function boot({ root, params = new URLSearchParams(globalThis.locat
     }
 
     if (authRedirect) handleAuthRedirect(app, authRedirect, { configured: !!(remote && remote.configured) });
+    else if (capture && app.ui && typeof app.ui.quickCreate === 'function') app.ui.quickCreate('task', capturePrefill(capture));
 
     win.DM = { app, ready: true, version: APP_VERSION };
     return app;

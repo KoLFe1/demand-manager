@@ -409,3 +409,19 @@
 }
 
 .v-config-inline { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; justify-content: flex-end; }
+
+/* Captura rápida */
+.v-config-capture-url {
+  display: block;
+  font-size: var(--fs-xs);
+  word-break: break-all;
+  user-select: all;
+}
+
+.v-config-bookmarklet {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  cursor: grab;
+  text-decoration: none;
+}

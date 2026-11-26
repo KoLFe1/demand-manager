@@ -101,7 +101,7 @@ const SETTING_RULES = Object.freeze({
   'capacity.hoursPerWeek': (v) => (typeof v === 'number' && Number.isFinite(v) && v > 0 && v <= 168 ? v : undefined),
   'deadline.soonDays': (v) => (Number.isInteger(v) && v >= 0 && v <= 60 ? v : undefined),
   'workflow.autoStartDemand': (v) => (typeof v === 'boolean' ? v : undefined),
-  'followup.defaultDays': (v) => (Number.isInteger(v) && v >= 0 && v <= 60 ? v : undefined),
+  'followup.defaultDays': (v) => (Number.isInteger(v) && v >= 1 && v <= 30 ? v : undefined),
   statuses: (v) => (v === null || (Array.isArray(v) && v.every((s) => s && typeof s === 'object' && typeof s.id === 'string' && s.id)) ? v : undefined),
   'suggestions.dismissed': (v) => (Array.isArray(v) && v.every((s) => typeof s === 'string') ? v : undefined),
   templates: (v) => {
@@ -119,7 +119,7 @@ const SETTING_MESSAGES = Object.freeze({
   'capacity.hoursPerWeek': 'Informe as horas por semana: um número maior que 0 e até 168.',
   'deadline.soonDays': 'Informe um número inteiro de dias, de 0 a 60.',
   'workflow.autoStartDemand': 'Esta opção aceita apenas ligado ou desligado.',
-  'followup.defaultDays': 'Informe um número inteiro de dias úteis, de 0 a 60.',
+  'followup.defaultDays': 'O prazo para cobrar de novo deve ser um número inteiro de dias úteis, de 1 a 30.',
   statuses: 'A personalização de status precisa ser uma lista de status com identificador.',
   'suggestions.dismissed': 'A lista de sugestões dispensadas é inválida.',
   templates: `Lista de modelos inválida (no máximo ${MAX_TEMPLATES} modelos de até 100 tarefas, sem chaves repetidas nem dependências em ciclo).`,
@@ -1703,7 +1703,7 @@ export function createCommands(app) {
       let nextDate = opts.nextDate === undefined || opts.nextDate === null || opts.nextDate === '' ? null : dateOrNull('follow_up_date', opts.nextDate);
       if (!nextDate) {
         const setting = store.get('settings', 'followup.defaultDays');
-        const days = setting && Number.isInteger(setting.value) ? setting.value : DEFAULT_FOLLOWUP_DAYS;
+        const days = setting && Number.isInteger(setting.value) && setting.value >= 1 && setting.value <= 30 ? setting.value : DEFAULT_FOLLOWUP_DAYS; // valor antigo fora da faixa → padrão
         nextDate = nextFollowUpDate(today, days);
       }
       const waiting = categoryOf(list, row.status) === 'waiting';
