@@ -28,6 +28,7 @@ export const NAV_SHORTCUTS = Object.freeze({
   hierarquia: 'g h',
   backlog: 'g b',
   dependencias: 'g p',
+  cronograma: 'g o',
   tempo: 'g t',
   metricas: 'g m',
 });

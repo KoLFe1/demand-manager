@@ -34,6 +34,7 @@ const CANONICAL = Object.freeze([
   { id: 'hierarquia', title: 'Hierarquia', icon: 'tree', section: 'views' },
   { id: 'backlog', title: 'Backlog', icon: 'inbox', section: 'views' },
   { id: 'dependencias', title: 'Dependências', icon: 'git-branch', section: 'views' },
+  { id: 'cronograma', title: 'Cronograma', icon: 'rows', section: 'views' },
   { id: 'tempo', title: 'Tempo', icon: 'timer', section: 'analysis' },
   { id: 'metricas', title: 'Métricas', icon: 'chart', section: 'analysis' },
   { id: 'config', title: 'Configurações', icon: 'settings', section: 'system' },

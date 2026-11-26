@@ -1,0 +1,375 @@
+/* Demand Manager — estilos da visualização "Cronograma" (css/views/cronograma.css).
+ * Prefixo .v-crono / .v-cronograma; só variáveis de css/tokens.css (nenhuma cor literal).
+ *
+ *   .v-crono-toolbar   projeto, zoom, "Mostrar concluídas", "Subtarefas"
+ *   .v-crono-scroll    área rolável (horizontal e vertical): cabeçalho fixo no topo, rótulos fixos à esquerda
+ *   .v-crono-chart     SVG das barras (.v-crono-item.is-bar|is-summary|is-milestone), setas e "hoje"
+ *   .v-crono-undated   lista "Sem datas"
+ */
+
+.v-cronograma {
+  --crono-label-w: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-6) var(--sp-6);
+  min-width: 0;
+}
+
+.v-cronograma.is-mobile {
+  --crono-label-w: 132px;
+  padding: var(--sp-3) var(--sp-3) var(--sp-6);
+}
+
+.v-crono-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+}
+
+.v-crono-project {
+  max-width: 260px;
+}
+
+.v-crono-summary {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.v-crono-note {
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-md);
+  background: var(--warning-soft);
+  color: var(--text);
+  font-size: var(--fs-sm);
+}
+
+.v-crono-scroll {
+  position: relative;
+  overflow: auto;
+  max-height: calc(100dvh - var(--topbar-h) - 150px);
+  min-height: 160px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg-elevated);
+  overscroll-behavior: contain;
+}
+
+.v-crono-canvas {
+  display: inline-block;
+  min-width: 100%;
+}
+
+.v-crono-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+
+.v-crono-corner {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  flex: 0 0 var(--crono-label-w);
+  width: var(--crono-label-w);
+  display: flex;
+  align-items: flex-end;
+  padding: 0 var(--sp-3) var(--sp-2);
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  box-sizing: border-box;
+}
+
+.v-crono-body {
+  display: flex;
+}
+
+.v-crono-labels {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  flex: 0 0 var(--crono-label-w);
+  width: var(--crono-label-w);
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--border);
+  box-sizing: border-box;
+}
+
+.v-crono-label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  height: var(--crono-row-h);
+  padding: 0 var(--sp-3);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.v-crono-label:last-child {
+  border-bottom-color: transparent;
+}
+
+.v-crono-label:hover {
+  background: var(--bg-hover);
+}
+
+.v-crono-label:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.v-crono-label.depth-1 {
+  padding-left: calc(var(--sp-3) + var(--sp-4));
+}
+
+.v-crono-label.depth-2 {
+  padding-left: calc(var(--sp-3) + var(--sp-8));
+}
+
+.v-crono-label.is-demand {
+  font-weight: 600;
+  background: var(--bg-subtle);
+}
+
+.v-crono-label.is-closed .v-crono-name {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.v-crono-label.is-overdue .v-crono-code {
+  color: var(--danger);
+}
+
+.v-crono-code {
+  flex: 0 0 auto;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.v-crono-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.is-mobile .v-crono-label {
+  padding-right: var(--sp-2);
+}
+
+.is-mobile .v-crono-label.depth-1 {
+  padding-left: calc(var(--sp-3) + var(--sp-2));
+}
+
+.is-mobile .v-crono-label .v-crono-code {
+  display: none;
+}
+
+.v-crono-ruler,
+.v-crono-chart {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.v-crono-major-label {
+  fill: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.v-crono-minor-label {
+  fill: var(--text-muted);
+  font-size: 11px;
+}
+
+.v-crono-minor-label.is-today {
+  fill: var(--accent);
+  font-weight: 700;
+}
+
+.v-crono-tick-major {
+  stroke: var(--border-strong);
+}
+
+.v-crono-tick-minor,
+.v-crono-gridline {
+  stroke: var(--border);
+}
+
+.v-crono-rowline {
+  stroke: var(--border);
+  stroke-opacity: 0.6;
+}
+
+.v-crono-weekend {
+  fill: var(--bg-subtle);
+}
+
+.v-crono-today {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+
+/* Barras: preenchimento suave do status + contorno no tom sólido. */
+.v-crono-item {
+  --tone: var(--st-gray);
+  --tone-soft: var(--st-gray-soft);
+  cursor: pointer;
+  outline: none;
+}
+
+.v-crono-item.st-slate { --tone: var(--st-slate); --tone-soft: var(--st-slate-soft); }
+.v-crono-item.st-blue { --tone: var(--st-blue); --tone-soft: var(--st-blue-soft); }
+.v-crono-item.st-amber { --tone: var(--st-amber); --tone-soft: var(--st-amber-soft); }
+.v-crono-item.st-red { --tone: var(--st-red); --tone-soft: var(--st-red-soft); }
+.v-crono-item.st-violet { --tone: var(--st-violet); --tone-soft: var(--st-violet-soft); }
+.v-crono-item.st-green { --tone: var(--st-green); --tone-soft: var(--st-green-soft); }
+.v-crono-item.st-neutral { --tone: var(--st-neutral); --tone-soft: var(--st-neutral-soft); }
+
+.v-crono-bar {
+  fill: var(--tone-soft);
+  stroke: var(--tone);
+  stroke-width: 1.5;
+}
+
+.v-crono-bar.is-estimated {
+  stroke-dasharray: 5 3;
+}
+
+.v-crono-bar-label {
+  fill: var(--text);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.v-crono-diamond {
+  fill: var(--tone);
+  stroke: var(--bg-elevated);
+  stroke-width: 1.5;
+}
+
+.v-crono-summary-bar,
+.v-crono-summary-cap {
+  fill: var(--text-muted);
+}
+
+.v-crono-item.is-overdue .v-crono-bar,
+.v-crono-item.is-overdue .v-crono-diamond {
+  stroke: var(--danger);
+  stroke-width: 2.5;
+}
+
+.v-crono-item.is-overdue .v-crono-bar {
+  fill: var(--danger-soft);
+}
+
+.v-crono-item.is-demand.is-overdue .v-crono-summary-bar,
+.v-crono-item.is-demand.is-overdue .v-crono-summary-cap {
+  fill: var(--danger);
+}
+
+.v-crono-item.is-closed {
+  opacity: 0.55;
+}
+
+.v-crono-item:hover .v-crono-bar,
+.v-crono-item:focus-visible .v-crono-bar,
+.v-crono-item:hover .v-crono-diamond,
+.v-crono-item:focus-visible .v-crono-diamond {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+.v-crono-item:focus-visible .v-crono-summary-bar {
+  fill: var(--accent);
+}
+
+.v-crono-link {
+  fill: none;
+  stroke: var(--text-faint);
+  stroke-width: 1.5;
+}
+
+.v-crono-link.is-conflict {
+  stroke: var(--danger);
+  stroke-width: 2;
+}
+
+.v-crono-arrowhead {
+  fill: var(--text-faint);
+}
+
+.v-crono-arrowhead.is-conflict {
+  fill: var(--danger);
+}
+
+.v-crono-undated {
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg-elevated);
+  padding: var(--sp-3) var(--sp-4);
+}
+
+.v-crono-undated-title {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+
+.v-crono-count {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.v-crono-undated-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--sp-1) var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.v-crono-undated-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: var(--sp-1) var(--sp-2);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.v-crono-undated-item:hover {
+  background: var(--bg-hover);
+}
+
+.v-crono-undated-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
