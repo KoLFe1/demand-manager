@@ -728,7 +728,9 @@ export async function boot({ root, params = new URLSearchParams(globalThis.locat
 
     stage = 'ler a configuração da sincronização';
     const emulator = emulatorHook(params, win);
-    const config = emulator ? { supabaseUrl: emulator.url, supabaseKey: emulator.key, source: 'emulator' } : readConfig(storage, win);
+    // Espaço isolado (?db=NOME: testes, desenvolvimento) ignora o config.js publicado: nunca fala com o Supabase
+    // real por acidente. Lá vale só a configuração gravada no próprio espaço (ou o emulador).
+    const config = emulator ? { supabaseUrl: emulator.url, supabaseKey: emulator.key, source: 'emulator' } : readConfig(storage, namespace ? {} : win);
     const fetchImpl = emulator ? (input, init) => emulator.fetch(input, init) : null;
 
     // Volta de um link do e-mail (recuperar senha, confirmar conta): os tokens saem JÁ da barra de endereço e do
