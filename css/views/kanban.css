@@ -1,0 +1,734 @@
+/* Demand Manager — estilos da visualização "Kanban" (css/views/kanban.css). Prefixo .v-kanban; só tokens.
+ *
+ *   .v-kanban            raiz (ocupa a altura da área da tela)
+ *   .v-kanban-bar        modo (Tarefas | Demandas) + barra de filtros
+ *   .v-kanban-tabs       faixa de status do celular
+ *   .v-kanban-board      quadro; sem raias = colunas lado a lado com rolagem própria; .has-lanes = raias
+ *   .v-kanban-col        coluna (cabeçalho + criação rápida + lista); .is-collapsed = faixa vertical
+ *   .v-kanban-item       cartão (entityCard) + botão "Mais ações"; é a linha arrastável
+ */
+
+/* ------------------------------------------------------------------ ocupar a altura da área da tela */
+.shell-view:has(> .v-kanban) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.v-kanban {
+  --kb-col-w: 284px;
+  --kb-strip-w: 44px;
+  --kb-gap: var(--sp-3);
+  --kb-pad: var(--sp-5);
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+  min-height: 0;
+  padding-top: var(--sp-4);
+}
+
+/* ------------------------------------------------------------------ barra */
+.v-kanban-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2) var(--sp-3);
+  min-width: 0;
+  padding: 0 var(--kb-pad);
+}
+
+.v-kanban-bar > .fb {
+  flex: 1 1 auto;
+}
+
+.v-kanban-mode {
+  flex-shrink: 0;
+}
+
+.v-kanban-opt {
+  color: var(--text-muted);
+}
+
+.v-kanban-opt.is-on {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+/* ------------------------------------------------------------------ quadro (sem raias) */
+.v-kanban-board {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: stretch;
+  gap: var(--kb-gap);
+  min-height: 0;
+  padding: 0 var(--kb-pad) var(--sp-4);
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-padding: 0 var(--kb-pad);
+}
+
+/* o último espaço depois da última coluna (o padding direito some no overflow) */
+.v-kanban-board:not(.has-lanes)::after {
+  content: "";
+  flex: 0 0 1px;
+  margin-left: calc(var(--kb-pad) - var(--kb-gap) - 1px);
+}
+
+.v-kanban-col {
+  display: flex;
+  flex: 0 0 var(--kb-col-w);
+  flex-direction: column;
+  width: var(--kb-col-w);
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg-subtle);
+  transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+
+.v-kanban-col.is-collapsed {
+  flex-basis: var(--kb-strip-w);
+  width: var(--kb-strip-w);
+}
+
+/* coluna de destino em destaque durante o arrasto */
+.v-kanban-col:has(.is-drop-target),
+.v-kanban-col.is-drop-target {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: color-mix(in srgb, var(--accent-soft) 60%, var(--bg-subtle));
+}
+
+.v-kanban-col.is-drop-target.drop-inside {
+  outline: none;
+}
+
+/* ------------------------------------------------------------------ cabeçalho da coluna */
+.v-kanban-head {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 var(--sp-1) 0 var(--sp-3);
+}
+
+.v-kanban-glyph {
+  flex-shrink: 0;
+}
+
+.v-kanban-name {
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+}
+
+.v-kanban-count {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--r-full);
+  background: var(--bg-inset);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  justify-content: center;
+}
+
+.v-kanban-count.is-warn {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.v-kanban-est {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+.v-kanban-est::before {
+  content: "· ";
+}
+
+.v-kanban-spacer {
+  flex: 1 1 auto;
+}
+
+.v-kanban-head {
+  position: relative;
+}
+
+.v-kanban-head .btn {
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+
+.v-kanban-head .btn:hover {
+  color: var(--text);
+}
+
+/* ações do cabeçalho: no computador aparecem ao passar o mouse (ou com foco), por cima do fim da linha,
+ * para o nome e a contagem caberem inteiros no resto do tempo */
+.v-kanban-actions {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 1px;
+}
+
+.v-kanban:not(.is-mobile) .v-kanban-actions {
+  position: absolute;
+  top: 50%;
+  right: var(--sp-1);
+  padding-left: var(--sp-4);
+  background: linear-gradient(to right, transparent, var(--bg-subtle) var(--sp-4));
+  opacity: 0;
+  pointer-events: none;
+  translate: 0 -50%;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.v-kanban:not(.is-mobile) .v-kanban-head:hover .v-kanban-actions,
+.v-kanban:not(.is-mobile) .v-kanban-head:focus-within .v-kanban-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.v-kanban:not(.is-mobile) .v-kanban-head.is-over-wip .v-kanban-actions {
+  background: linear-gradient(to right, transparent, var(--bg-subtle) var(--sp-4));
+}
+
+/* no quadro o status já é a coluna: o selo do cartão só fica no celular (onde troca o status sem arrastar) */
+.v-kanban:not(.is-mobile) .v-kanban-card .en-card-meta > .en-status {
+  display: none;
+}
+
+/* WIP acima do limite: tom de alerta discreto */
+.v-kanban-head.is-over-wip {
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: color-mix(in srgb, var(--warning-soft) 70%, transparent);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--warning) 25%, transparent);
+}
+
+/* ------------------------------------------------------------------ criação rápida */
+.v-kanban-quickadd {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+  margin: 0 var(--sp-2) var(--sp-1);
+}
+
+.v-kanban-quickadd .en-quickadd {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 var(--sp-2);
+  background: var(--bg-elevated);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+/* ------------------------------------------------------------------ lista de cartões */
+.v-kanban-list {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 48px;
+  padding: 2px var(--sp-2) var(--sp-3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
+  scrollbar-width: thin;
+}
+
+/* a lista em si não ganha contorno: quem se destaca é a coluna */
+.v-kanban-list.is-drop-target.drop-inside {
+  background: transparent;
+  outline: none;
+}
+
+/* sem ordem manual: soltar na lista mostra uma área tracejada no fim */
+.v-kanban-list.is-drop-target.drop-inside::after {
+  content: "";
+  flex: 0 0 36px;
+  margin-top: 4px;
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--accent-soft) 70%, transparent);
+}
+
+/* o espaço entre cartões é padding do item: assim o ponteiro está sempre sobre um cartão (inserção precisa) */
+.v-kanban-item {
+  position: relative;
+  flex-shrink: 0;
+  padding: 3px 0;
+}
+
+.v-kanban-item[draggable="true"] {
+  cursor: grab;
+}
+
+.v-kanban-item.is-dragging {
+  opacity: 0.35;
+}
+
+.v-kanban-item.is-drop-target.drop-before::after {
+  top: 0;
+}
+
+.v-kanban-item.is-drop-target.drop-after::after {
+  bottom: 0;
+}
+
+.v-kanban-card {
+  cursor: pointer;
+}
+
+/* espaço para o botão "Mais ações" no canto */
+.v-kanban-card .en-card-top {
+  padding-right: 22px;
+}
+
+.v-kanban-more {
+  position: absolute;
+  top: 7px;
+  right: 4px;
+  z-index: 1;
+  color: var(--text-faint);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.v-kanban-item:hover .v-kanban-more,
+.v-kanban-item:focus-within .v-kanban-more,
+.v-kanban-more[aria-expanded="true"] {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .v-kanban-more {
+    opacity: 1;
+  }
+}
+
+/* subtarefa: nome da tarefa principal, sem a linha divisória do rodapé padrão */
+.v-kanban-card .en-card-footer {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.v-kanban-parent {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+}
+
+.v-kanban-parent > svg {
+  flex-shrink: 0;
+}
+
+.v-kanban-hint {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  min-height: 64px;
+  margin-top: 3px;
+  border: 1px dashed var(--border);
+  border-radius: var(--r-md);
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+
+/* durante um arrasto, a coluna vazia convida a soltar ("Nenhuma tarefa" → "Solte aqui") */
+.is-dnd-active .v-kanban-hint {
+  border-color: var(--border-strong);
+  font-size: 0;
+}
+
+.is-dnd-active .v-kanban-hint::before {
+  content: "Solte aqui";
+  font-size: var(--fs-sm);
+}
+
+.v-kanban-more-cards {
+  flex-shrink: 0;
+  margin-top: var(--sp-1);
+  color: var(--text-muted);
+}
+
+/* ------------------------------------------------------------------ coluna recolhida */
+.v-kanban-strip {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 0;
+  padding: var(--sp-3) 0;
+  border: 0;
+  border-radius: var(--r-lg);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.v-kanban-strip:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.v-kanban-strip:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.v-kanban-strip-name {
+  overflow: hidden;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  writing-mode: vertical-rl;
+}
+
+.v-kanban-strip.is-over-wip .v-kanban-strip-name {
+  color: var(--warning);
+}
+
+/* ------------------------------------------------------------------ quadro com raias */
+.v-kanban-board.has-lanes {
+  display: block;
+  overflow: auto;
+  padding: 0 0 var(--sp-4);
+}
+
+.v-kanban-board.has-lanes > * {
+  width: max-content;
+  min-width: 100%;
+  padding-right: var(--kb-pad);
+  padding-left: var(--kb-pad);
+}
+
+.v-kanban-headrow,
+.v-kanban-lane-row {
+  display: flex;
+  gap: var(--kb-gap);
+}
+
+.v-kanban-headrow {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding-bottom: var(--sp-2);
+  background: var(--bg);
+}
+
+.v-kanban-headcell,
+.v-kanban-cell {
+  flex: 0 0 var(--kb-col-w);
+  width: var(--kb-col-w);
+  min-width: 0;
+}
+
+.v-kanban-headcell {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg-subtle);
+}
+
+.v-kanban-headcell.is-collapsed,
+.v-kanban-cell.is-collapsed {
+  flex-basis: var(--kb-strip-w);
+  width: var(--kb-strip-w);
+}
+
+.v-kanban-headcell.is-drop-target.drop-inside,
+.v-kanban-cell.is-drop-target.drop-inside {
+  outline: 1.5px solid var(--accent);
+  background: var(--accent-soft);
+}
+
+.v-kanban-strip.is-head {
+  flex-direction: row;
+  justify-content: center;
+  gap: 4px;
+  height: 38px;
+  padding: 0;
+}
+
+.v-kanban-strip.is-head .v-kanban-count {
+  display: none;
+}
+
+.v-kanban-lane {
+  margin-top: var(--sp-2);
+}
+
+.v-kanban-lane-head {
+  position: sticky;
+  left: var(--sp-3);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  width: max-content;
+  max-width: 100%;
+  height: 32px;
+}
+
+.v-kanban-lane-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 var(--sp-2) 0 var(--sp-1);
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.v-kanban-lane-toggle:hover {
+  background: var(--bg-hover);
+}
+
+.v-kanban-lane-toggle:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.v-kanban-lane-caret,
+.v-kanban-lane-icon {
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+
+.v-kanban-lane-code {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+}
+
+.v-kanban-lane-name {
+  min-width: 0;
+  max-width: 48ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v-kanban-lane-name.is-empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.v-kanban-lane-count {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-normal);
+}
+
+.v-kanban-lane-open {
+  color: var(--text-faint);
+  opacity: 0;
+}
+
+.v-kanban-lane-head:hover .v-kanban-lane-open,
+.v-kanban-lane-open:focus-visible {
+  opacity: 1;
+}
+
+.v-kanban-lane-row {
+  padding-bottom: var(--sp-1);
+  border-bottom: 1px solid var(--border);
+}
+
+.v-kanban-lane-row .v-kanban-cell {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-lg);
+  background: var(--bg-subtle);
+}
+
+/* célula vazia de raia: quase invisível (só aparece como destino durante o arrasto) */
+.v-kanban-lane-row .v-kanban-cell:not(.is-collapsed):not(:has(.v-kanban-item)) {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.is-dnd-active .v-kanban-lane-row .v-kanban-cell:not(.is-collapsed):not(:has(.v-kanban-item)) {
+  background: var(--bg-subtle);
+}
+
+.v-kanban-lane-row .v-kanban-list {
+  flex: 1 1 auto;
+  padding-top: var(--sp-1);
+  padding-bottom: var(--sp-2);
+  overflow: visible;
+}
+
+.v-kanban-cell.is-collapsed {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 48px;
+  padding-top: var(--sp-2);
+  border-radius: var(--r-lg);
+  background: var(--bg-subtle);
+}
+
+.v-kanban-lane-row .v-kanban-cell:has(.is-drop-target) {
+  background: color-mix(in srgb, var(--accent-soft) 60%, var(--bg-subtle));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.v-kanban-lane-row .v-kanban-hint {
+  min-height: 40px;
+  border-color: transparent;
+  font-size: 0;
+}
+
+.is-dnd-active .v-kanban-lane-row .v-kanban-hint {
+  border-color: var(--border-strong);
+}
+
+/* ------------------------------------------------------------------ estado vazio */
+.v-kanban-empty-wrap {
+  display: grid;
+  flex: 1 1 auto;
+  place-items: center;
+  padding: 0 var(--kb-pad) var(--sp-8);
+}
+
+/* ------------------------------------------------------------------ celular */
+.v-kanban.is-mobile {
+  --kb-pad: var(--sp-4);
+  --kb-gap: var(--sp-3);
+  gap: var(--sp-2);
+  padding-top: var(--sp-3);
+}
+
+.v-kanban.is-mobile .v-kanban-bar {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.v-kanban-bar-top {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+/* rótulos dos botões de exibição viram só ícones no celular */
+.v-kanban.is-mobile .v-kanban-opt .btn-label {
+  display: none;
+}
+
+.v-kanban-tabs {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+  padding: 0 var(--kb-pad) 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.v-kanban-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.v-kanban-tab {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 var(--sp-3) 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.v-kanban-tab.is-active {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.v-kanban-tab:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.v-kanban-tab-count {
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+}
+
+.v-kanban-tab.is-active .v-kanban-tab-count {
+  color: currentColor;
+}
+
+.v-kanban-board.is-phone {
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.v-kanban-board.is-phone::-webkit-scrollbar {
+  display: none;
+}
+
+.v-kanban-board.is-phone .v-kanban-col {
+  flex: 0 0 100%;
+  width: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.v-kanban-board.is-phone::after {
+  margin-left: calc(var(--kb-pad) - var(--kb-gap) - 1px);
+}
+
+/* no toque os botões do cabeçalho ficam sempre à mostra */
+.v-kanban.is-mobile .v-kanban-head .btn {
+  opacity: 1;
+}
+
+.v-kanban-group + .v-kanban-group {
+  margin-top: var(--sp-2);
+}
+
+.v-kanban-lane-head.is-compact {
+  position: static;
+  height: 30px;
+}
+
+.v-kanban-lane-head.is-compact .v-kanban-lane-toggle {
+  font-size: var(--fs-sm);
+}

@@ -1,0 +1,364 @@
+/* Demand Manager — componentes compartilhados pelas telas (js/ui/shared/*).
+ *
+ * Barra de filtros (js/ui/shared/filterbar.js) — prefixo .fb-
+ *   .fb                 raiz; é um contêiner de consulta (container query) chamado "fb"
+ *   .fb-main            linha 1: busca, botões de filtro, contador, ordenação, extras
+ *   .fb-chips           linha 2: chips dos filtros ativos + "Limpar filtros"
+ *   .fb-desktop/.fb-phone  partes que só aparecem com espaço largo / estreito
+ * Abaixo de 768 px de LARGURA DA BARRA (não da janela) — ou com .fb-compact — a barra se recolhe:
+ * busca + botão "Filtros (n)", que abre os mesmos controles numa folha (.fb-sheet).
+ * Só variáveis de css/tokens.css: nenhuma cor literal.
+ */
+
+/* ------------------------------------------------------------------ barra */
+.fb {
+  container-type: inline-size;
+  container-name: fb;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.fb-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-2);
+  min-width: 0;
+}
+
+.fb-search {
+  flex: 0 1 240px;
+  min-width: 160px;
+}
+
+.fb-search .input {
+  width: 100%;
+}
+
+.fb-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+/* contador + ordenação + extras: sempre à direita (ao quebrar a linha, descem juntos, alinhados à direita) */
+.fb-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+  min-width: 0;
+  margin-left: auto;
+}
+
+/* ------------------------------------------------------------------ botões de filtro */
+.fb-btn {
+  max-width: 260px;
+  border-color: transparent;
+  color: var(--text-muted);
+}
+
+.fb-btn:not(:disabled):hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.fb-btn:not(:disabled):active,
+.fb-btn[aria-expanded="true"] {
+  background: var(--bg-active);
+}
+
+.fb-btn .fb-btn-icon {
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+
+.fb-btn .fb-btn-caret,
+.fb-btn .fb-sort-dir {
+  flex-shrink: 0;
+  margin-left: -1px;
+  color: var(--text-faint);
+}
+
+.fb-btn.is-active {
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.fb-btn.is-active:not(:disabled):hover {
+  background: color-mix(in srgb, var(--accent-soft), var(--accent) 10%);
+  color: var(--accent-text);
+}
+
+.fb-btn.is-active .fb-btn-icon,
+.fb-btn.is-active .fb-btn-caret {
+  color: currentColor;
+}
+
+.fb-btn-value {
+  font-weight: var(--fw-semibold);
+}
+
+.fb-btn-count {
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.fb-sort {
+  color: var(--text-muted);
+}
+
+/* ------------------------------------------------------------------ contador e extras */
+.fb-count {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+.fb-extra {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* ------------------------------------------------------------------ chips dos filtros ativos */
+.fb-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) 6px;
+  min-width: 0;
+}
+
+.fb-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-width: 0;
+  height: 24px;
+  padding-left: var(--sp-2);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  border-radius: var(--r-full);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: var(--fs-sm);
+  line-height: 1;
+}
+
+.fb-chip-text {
+  min-width: 0;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fb-chip-remove {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin: 0 1px 0 2px;
+  border-radius: var(--r-full);
+  color: currentColor;
+  opacity: 0.75;
+}
+
+.fb-chip-remove:hover {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  opacity: 1;
+}
+
+.fb-chip-remove:focus-visible {
+  opacity: 1;
+}
+
+.fb-clear {
+  color: var(--text-muted);
+}
+
+/* ------------------------------------------------------------------ largo × estreito */
+.fb-phone {
+  display: none;
+}
+
+/* largura intermediária: os botões de filtro perdem o ícone para caber numa linha */
+@container fb (max-width: 1199px) {
+  .fb-controls .fb-btn-icon {
+    display: none;
+  }
+
+  .fb-search {
+    flex-basis: 200px;
+  }
+}
+
+@container fb (max-width: 767px) {
+  .fb-desktop {
+    display: none;
+  }
+
+  .fb-phone {
+    display: inline-flex;
+  }
+
+  .fb-search {
+    flex: 1 1 160px;
+  }
+
+  .fb-end {
+    flex: 0 1 auto;
+  }
+
+  .fb-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 1px;
+  }
+
+  .fb-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fb-chip,
+  .fb-clear {
+    flex-shrink: 0;
+  }
+}
+
+.fb.fb-compact .fb-desktop {
+  display: none;
+}
+
+.fb.fb-compact .fb-phone {
+  display: inline-flex;
+}
+
+.fb.fb-compact .fb-search {
+  flex: 1 1 140px;
+  min-width: 120px;
+}
+
+.fb.fb-compact .fb-end {
+  flex: 0 1 auto;
+}
+
+/* ------------------------------------------------------------------ folha "Filtros" (celular) */
+.fb-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.fb-sheet-group {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.fb-sheet-heading {
+  padding: var(--sp-2) var(--sp-3) var(--sp-1);
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fb-sheet-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  min-height: var(--ctl-h-touch);
+  padding: 0 var(--sp-3);
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-md);
+  text-align: left;
+  cursor: pointer;
+}
+
+.fb-sheet-row + .fb-sheet-row {
+  border-top: 1px solid var(--border);
+}
+
+.fb-sheet-row:hover {
+  background: var(--bg-hover);
+}
+
+.fb-sheet-row:active {
+  background: var(--bg-active);
+}
+
+.fb-sheet-icon {
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+
+.fb-sheet-label {
+  flex-shrink: 0;
+  font-weight: var(--fw-medium);
+}
+
+.fb-sheet-value {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fb-sheet-row.is-active .fb-sheet-value,
+.fb-sheet-row.is-active .fb-sheet-icon {
+  color: var(--accent-text);
+  font-weight: var(--fw-medium);
+}
+
+.fb-sheet-caret {
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+
+.fb-sheet-switch {
+  display: flex;
+  align-items: center;
+  min-height: var(--ctl-h-touch);
+  padding: 0 var(--sp-3);
+}
+
+.fb-sheet-switch + .fb-sheet-switch {
+  border-top: 1px solid var(--border);
+}
+
+.fb-sheet-switch > .switch {
+  flex: 1 1 auto;
+  flex-direction: row-reverse;
+  justify-content: space-between;
+  min-height: var(--ctl-h-touch);
+  cursor: pointer;
+}
+
+.fb-sheet-switch .switch-label {
+  font-size: var(--fs-md);
+}

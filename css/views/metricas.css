@@ -1,0 +1,474 @@
+/* Demand Manager — tela "Métricas" (css/views/metricas.css). Prefixo .v-metricas; só tokens.
+ *
+ * Layout: cabeçalho (título, período, Exportar) → barra de período e filtros → quatro seções com cabeçalho
+ * fixo ao rolar e uma grade de cartões 4 → 2 → 1 colunas (consulta de contêiner: o painel lateral aberto
+ * estreita a tela e a grade acompanha).
+ */
+
+.v-metricas {
+  container: v-metricas / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: var(--sp-6) var(--sp-6) var(--sp-12);
+}
+
+/* ------------------------------------------------------------------ cabeçalho */
+.v-metricas-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+
+.v-metricas-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.v-metricas-title {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+  letter-spacing: -0.01em;
+}
+
+.v-metricas-period {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+  line-height: var(--lh);
+}
+
+.v-metricas-period-range {
+  color: var(--text);
+  font-weight: var(--fw-medium);
+}
+
+.v-metricas-dot {
+  color: var(--text-faint);
+}
+
+.v-metricas-compare {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+
+.v-metricas-export {
+  flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------------ barra de período e filtros */
+.v-metricas-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-2);
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.v-metricas-tool:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.v-metricas-tool-sep {
+  flex-shrink: 0;
+  width: 1px;
+  height: 16px;
+  margin: 0 var(--sp-1);
+  background: var(--border);
+}
+
+.v-metricas-custom {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.v-metricas-custom .input-date {
+  width: 136px;
+}
+
+.v-metricas-custom-sep {
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+
+/* ------------------------------------------------------------------ seções */
+.v-metricas-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+}
+
+.v-metricas-section-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--sp-3);
+  margin-bottom: var(--sp-3);
+  padding: var(--sp-3) 0 var(--sp-2);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.v-metricas-section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  color: var(--text);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+}
+
+.v-metricas-section-title .icon {
+  color: var(--text-faint);
+}
+
+.v-metricas-section-desc {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+
+/* ------------------------------------------------------------------ grade e cartões */
+.v-metricas-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sp-3);
+}
+
+.v-metricas-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+}
+
+.v-metricas-card.span-2 {
+  grid-column: span 2;
+}
+
+.v-metricas-card.span-full {
+  grid-column: 1 / -1;
+}
+
+.v-metricas-card.row-3 {
+  grid-row: span 3;
+}
+
+.v-metricas-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-width: 0;
+  min-height: 20px;
+}
+
+.v-metricas-card-label {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-tight);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.v-metricas-info {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-faint);
+  cursor: help;
+}
+
+.v-metricas-info:hover {
+  background: var(--bg-hover);
+  color: var(--text-muted);
+}
+
+.v-metricas-info:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.v-metricas-card-value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.v-metricas-num {
+  color: var(--text);
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-semibold);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.v-metricas-unit {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.v-metricas-card-spark {
+  align-self: center;
+  margin-left: auto;
+  padding-left: var(--sp-2);
+}
+
+.v-metricas-card.tone-danger .v-metricas-num { color: var(--danger); }
+.v-metricas-card.tone-warning .v-metricas-num { color: var(--warning); }
+.v-metricas-card.tone-success .v-metricas-num { color: var(--success); }
+.v-metricas-card.is-empty .v-metricas-num { color: var(--text-faint); }
+
+.v-metricas-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-height: 20px;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-tight);
+}
+
+.v-metricas-sub {
+  min-width: 0;
+  color: var(--text-faint);
+}
+
+.v-metricas-sub.is-empty {
+  font-style: italic;
+}
+
+/* selo de variação */
+.v-metricas-delta {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--r-full);
+  background: var(--bg-inset);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+  cursor: default;
+}
+
+.v-metricas-delta-arrow {
+  font-size: 8px;
+  line-height: 1;
+}
+
+.v-metricas-delta.is-good {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.v-metricas-delta.is-bad {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* cartões de gráfico */
+.v-metricas-card.is-chart {
+  gap: var(--sp-2);
+}
+
+.v-metricas-card.is-chart .v-metricas-card-head {
+  flex-wrap: wrap;
+}
+
+.v-metricas-chart-title {
+  overflow: hidden;
+  color: var(--text);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.v-metricas-card-aside {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.v-metricas-chart-caption {
+  margin: -4px 0 0;
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-tight);
+}
+
+.v-metricas-chart-body {
+  min-width: 0;
+  margin-top: var(--sp-1);
+}
+
+.v-metricas-chart-body .chart-hbar {
+  margin-top: var(--sp-1);
+}
+
+/* lista de impedimentos */
+.v-metricas-implist {
+  display: flex;
+  flex-direction: column;
+  margin: 0 calc(var(--sp-2) * -1);
+}
+
+.v-metricas-improw {
+  border-radius: var(--r-md);
+}
+
+.v-metricas-improw .en-cell-status:not(.is-compact) {
+  width: 184px;
+}
+
+.v-metricas-since {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+.v-metricas-since.is-blocked { color: var(--danger); }
+.v-metricas-since.is-waiting { color: var(--warning); }
+
+.v-metricas-more {
+  padding: var(--sp-2) var(--sp-2) 0;
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+
+/* explicação de um indicador (popover) */
+.v-metricas-help {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3) 14px;
+}
+
+.v-metricas-help-title {
+  color: var(--text);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+}
+
+.v-metricas-help-text {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+  line-height: var(--lh);
+}
+
+.v-metricas-help-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+}
+
+/* estados vazios */
+.v-metricas-empty {
+  margin-top: var(--sp-8);
+}
+
+/* ------------------------------------------------------------------ larguras menores */
+@container v-metricas (max-width: 1000px) {
+  .v-metricas-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .v-metricas-card.row-3 {
+    grid-row: auto;
+  }
+}
+
+@container v-metricas (max-width: 540px) {
+  .v-metricas-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .v-metricas-card.span-2 {
+    grid-column: auto;
+  }
+
+  .v-metricas-head {
+    flex-wrap: wrap;
+  }
+
+  .v-metricas-section-desc {
+    flex-basis: 100%;
+  }
+}
+
+.v-metricas.is-mobile {
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-4) var(--sp-10);
+}
+
+.v-metricas.is-mobile .v-metricas-title {
+  font-size: var(--fs-lg);
+}
+
+.v-metricas.is-mobile .v-metricas-tool-sep {
+  display: none;
+}
+
+.v-metricas.is-mobile .v-metricas-sections {
+  gap: var(--sp-6);
+}
+
+.v-metricas.is-mobile .v-metricas-grid {
+  gap: var(--sp-2);
+}
+
+.v-metricas.is-mobile .v-metricas-card {
+  padding: 10px 12px;
+}
+
+.v-metricas.is-mobile .v-metricas-num {
+  font-size: var(--fs-xl);
+}

@@ -1,0 +1,1321 @@
+/* Demand Manager — visualização "Calendário" (css/views/calendario.css). Prefixo .v-calendario; só tokens.
+ *
+ *   .v-calendario-bar       navegação (anterior / Hoje / próximo), título, chaves Demandas/Tarefas/Inícios, modo
+ *   .v-calendario-month     grade mensal (computador)      .v-calendario-mini   grade compacta (celular)
+ *   .v-calendario-week      faixa "Atrasadas" + 7 colunas  .v-calendario-wday   dia da semana (celular)
+ *   .v-calendario-dayview   "Vencem neste dia" + "Tempo registrado" (linha do tempo)
+ */
+
+.v-calendario {
+  --v-cal-hour: 44px; /* igual a HOUR_PX em js/ui/views/calendario/day.js */
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+  padding: var(--sp-5) var(--sp-6) var(--sp-8);
+}
+
+/* ------------------------------------------------------------------ barra */
+.v-calendario-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+  min-width: 0;
+}
+
+.v-calendario-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  flex-shrink: 0;
+}
+
+.v-calendario-title {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.v-calendario-title::first-letter {
+  text-transform: uppercase;
+}
+
+.v-calendario-bar-spacer {
+  flex: 1 1 auto;
+}
+
+.v-calendario-toggles {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.v-calendario-toggle:not(.is-active) {
+  color: var(--text-muted);
+}
+
+.v-calendario-toggle:not(.is-active) .icon {
+  color: var(--text-faint);
+}
+
+.v-calendario-filters {
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------------ avisos e legenda */
+.v-calendario-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.v-calendario-notice-icon {
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+
+.v-calendario-notice-text {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.v-calendario-notice-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.v-calendario-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+  padding-top: var(--sp-1);
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+}
+
+.v-calendario-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.v-calendario-legend-spacer {
+  flex: 1 1 auto;
+}
+
+.v-calendario-legend-keys {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+}
+
+.v-calendario-legend-keys .kbd {
+  font-size: 10px;
+}
+
+.v-calendario-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.v-calendario-legend-swatch.is-overdue {
+  background: var(--danger-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 45%, transparent);
+}
+
+.v-calendario-legend-prio {
+  display: inline-flex;
+  color: var(--p1);
+}
+
+.v-calendario-legend-done {
+  color: var(--text-faint);
+  text-decoration: line-through;
+}
+
+/* ------------------------------------------------------------------ marcadores comuns */
+.v-calendario-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  color: var(--st, var(--text-faint));
+}
+
+.v-calendario-glyph.is-start::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--text-faint);
+  border-radius: var(--r-full);
+  background: transparent;
+}
+
+.v-calendario-prio {
+  flex-shrink: 0;
+}
+
+.v-calendario-tag {
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  color: var(--text-faint);
+  font-size: 10px;
+  line-height: 15px;
+}
+
+/* chip compacto (mês, faixa de atrasadas, lista "+N mais") */
+.v-calendario-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  height: 20px;
+  padding: 0 5px 0 4px;
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  line-height: 20px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--dur-fast) var(--ease);
+}
+
+.v-calendario-chip:hover {
+  background: var(--bg-hover);
+}
+
+.v-calendario-chip:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -1px;
+}
+
+.v-calendario-chip-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.v-calendario-chip.is-demand {
+  background: var(--bg-inset);
+  font-weight: var(--fw-semibold);
+}
+
+.v-calendario-chip.is-demand:hover {
+  background: var(--bg-active);
+}
+
+.v-calendario-chip.is-overdue {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.v-calendario-chip.is-overdue:hover {
+  background: color-mix(in srgb, var(--danger-soft) 80%, var(--danger) 10%);
+}
+
+.v-calendario-chip.is-overdue .v-calendario-glyph {
+  color: var(--danger);
+}
+
+.v-calendario-chip.is-start {
+  color: var(--text-muted);
+  font-weight: var(--fw-normal);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.v-calendario-chip.is-closed .v-calendario-chip-name {
+  color: var(--text-faint);
+  text-decoration: line-through;
+}
+
+.v-calendario-chip.is-closed .v-calendario-glyph {
+  opacity: 0.75;
+}
+
+/* ------------------------------------------------------------------ mês (computador) */
+.v-calendario-month {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+}
+
+.v-calendario-month {
+  container-type: inline-size;
+  container-name: vcal-month;
+}
+
+.v-calendario-weekdays,
+.v-calendario-week-row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.v-calendario-weekdays {
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+
+.v-calendario-weekday {
+  padding: 6px var(--sp-2);
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.v-calendario-week-row + .v-calendario-week-row {
+  border-top: 1px solid var(--border);
+}
+
+.v-calendario-day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  min-height: 118px;
+  padding: 4px 4px 6px;
+  background: var(--bg);
+  outline: none;
+}
+
+.has-6-weeks .v-calendario-day {
+  min-height: 104px;
+}
+
+.v-calendario-day + .v-calendario-day {
+  border-left: 1px solid var(--border);
+}
+
+.v-calendario-day.is-weekend {
+  background: color-mix(in srgb, var(--bg-subtle) 70%, var(--bg));
+}
+
+.v-calendario-day.is-outside {
+  background: var(--bg-subtle);
+}
+
+.v-calendario-day.is-outside .v-calendario-day-num {
+  color: var(--text-faint);
+}
+
+.v-calendario-day.is-outside .v-calendario-day-items {
+  opacity: 0.72;
+}
+
+.v-calendario-day.is-selected {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.v-calendario-day:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--focus-ring);
+}
+
+.v-calendario-day.is-drop-target.drop-inside {
+  outline-offset: -2px;
+}
+
+.v-calendario-day-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-1);
+  height: 24px;
+  padding-left: 2px;
+}
+
+.v-calendario-day-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--r-full);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+
+.v-calendario-day-num:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.v-calendario-day.is-today .v-calendario-day-num {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: var(--fw-semibold);
+}
+
+.v-calendario-add {
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.v-calendario-day:hover .v-calendario-add,
+.v-calendario-day:focus-within .v-calendario-add,
+.v-calendario-col:hover .v-calendario-add,
+.v-calendario-col:focus-within .v-calendario-add,
+.v-calendario-add:focus-visible {
+  opacity: 1;
+}
+
+.v-calendario-day-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.v-calendario-more {
+  align-self: flex-start;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--r-sm);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+}
+
+.v-calendario-more:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+/* lista "+N mais" */
+.v-calendario-pop {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+}
+
+.v-calendario-pop-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: 2px 4px 0;
+}
+
+.v-calendario-pop-title {
+  font-weight: var(--fw-semibold);
+}
+
+.v-calendario-pop-title::first-letter {
+  text-transform: uppercase;
+}
+
+.v-calendario-pop-count {
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+}
+
+.v-calendario-pop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.v-calendario-pop-list .v-calendario-chip {
+  height: 26px;
+  line-height: 26px;
+  padding: 0 6px;
+}
+
+.v-calendario-pop-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding-top: var(--sp-1);
+  border-top: 1px solid var(--border);
+}
+
+/* ------------------------------------------------------------------ semana (computador) */
+.v-calendario-week {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.v-calendario-overdue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, var(--border));
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--danger-soft) 55%, var(--bg));
+}
+
+.v-calendario-overdue.is-collapsed {
+  gap: 0;
+}
+
+.v-calendario-overdue .section-icon,
+.v-calendario-section-head.is-danger .section-icon {
+  color: var(--danger);
+}
+
+.v-calendario-overdue-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+
+.v-calendario-overdue-list .v-calendario-chip {
+  max-width: 280px;
+  height: 24px;
+  padding: 0 8px 0 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  line-height: 24px;
+}
+
+.v-calendario-week-scroll {
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+}
+
+.v-calendario-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(148px, 1fr));
+  min-height: 62vh;
+}
+
+.v-calendario-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.v-calendario-col + .v-calendario-col {
+  border-left: 1px solid var(--border);
+}
+
+.v-calendario-col.is-weekend {
+  background: color-mix(in srgb, var(--bg-subtle) 70%, var(--bg));
+}
+
+.v-calendario-col-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  row-gap: 2px;
+  padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.v-calendario-col.is-today .v-calendario-col-head {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.v-calendario-col-title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  justify-self: start;
+  min-width: 0;
+  padding: 0 4px;
+  margin-left: -4px;
+  border-radius: var(--r-sm);
+}
+
+.v-calendario-col-title:hover {
+  background: var(--bg-hover);
+}
+
+.v-calendario-col-weekday {
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.v-calendario-col-num {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+}
+
+.v-calendario-col.is-today .v-calendario-col-num {
+  color: var(--accent-text);
+}
+
+.v-calendario-col.is-past:not(.is-today) .v-calendario-col-num {
+  color: var(--text-muted);
+}
+
+.v-calendario-col-meta {
+  grid-column: 1 / -1;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+}
+
+.v-calendario-col-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--sp-2);
+  min-height: 160px;
+}
+
+.v-calendario-col.is-drop-target.drop-inside {
+  outline-offset: -2px;
+}
+
+/* cartão da semana */
+.v-calendario-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 6px var(--sp-2) 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+
+.v-calendario-card:hover {
+  border-color: var(--border-strong);
+}
+
+.v-calendario-card:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.v-calendario-card-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 20px;
+}
+
+.v-calendario-card-top .en-code {
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+}
+
+.v-calendario-card-spacer {
+  flex: 1 1 auto;
+}
+
+.v-calendario-card-name {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: var(--fs-md);
+  line-height: var(--lh-tight);
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.v-calendario-card-kind {
+  margin-right: 4px;
+  color: var(--text-faint);
+  vertical-align: -1px;
+}
+
+.v-calendario-card.is-demand .v-calendario-card-name {
+  font-weight: var(--fw-semibold);
+}
+
+.v-calendario-card.is-demand {
+  background: color-mix(in srgb, var(--bg-inset) 55%, var(--bg-elevated));
+}
+
+.v-calendario-card.is-overdue {
+  box-shadow: var(--shadow-sm), inset 2px 0 0 var(--danger);
+}
+
+.v-calendario-card.is-overdue .v-calendario-card-name {
+  color: var(--danger);
+}
+
+.v-calendario-card.is-closed .v-calendario-card-name {
+  color: var(--text-faint);
+  text-decoration: line-through;
+}
+
+.v-calendario-card.is-start {
+  border-style: dashed;
+  background: transparent;
+  box-shadow: none;
+}
+
+.v-calendario-card.is-start .v-calendario-card-name {
+  color: var(--text-muted);
+}
+
+.v-calendario-card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+}
+
+.v-calendario-card-context {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.v-calendario-card-estimate {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* ------------------------------------------------------------------ listas (dia, celular) */
+.v-calendario-rows {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+}
+
+.v-calendario-rows + .v-calendario-rows,
+.v-calendario-rows-group {
+  margin-top: var(--sp-2);
+}
+
+.v-calendario-rows-label {
+  margin: 0 0 var(--sp-1);
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.v-calendario-row.is-start .en-title {
+  color: var(--text-muted);
+}
+
+.v-calendario-row.is-overdue .en-name {
+  color: var(--danger);
+}
+
+.v-calendario-day-empty {
+  border: 1px dashed var(--border);
+  border-radius: var(--r-md);
+}
+
+/* ------------------------------------------------------------------ dia */
+.v-calendario-dayview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 1fr);
+  align-items: start;
+  gap: var(--sp-6);
+  min-width: 0;
+}
+
+.v-calendario-dayview.is-phone {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-5);
+}
+
+.v-calendario-due {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.v-calendario-due-overdue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+}
+
+.v-calendario-time {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+}
+
+.v-calendario-time-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.v-calendario-time-title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.v-calendario-time-total {
+  color: var(--text-muted);
+  font-weight: var(--fw-medium);
+}
+
+.v-calendario-time-empty {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+
+.v-calendario-timeline-wrap {
+  padding: 8px 0 4px;
+}
+
+.v-calendario-timeline {
+  position: relative;
+  min-width: 0;
+}
+
+.v-calendario-hours {
+  position: absolute;
+  inset: 0;
+}
+
+.v-calendario-hour {
+  position: absolute;
+  right: 0;
+  left: 44px;
+  border-top: 1px solid var(--chart-grid);
+}
+
+.v-calendario-hour-label {
+  position: absolute;
+  top: 0;
+  left: -44px;
+  width: 36px;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  line-height: 1;
+  text-align: right;
+  transform: translateY(-50%);
+}
+
+.v-calendario-lane {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 48px;
+}
+
+.v-calendario-now {
+  position: absolute;
+  right: 0;
+  left: -4px;
+  z-index: 2;
+  height: 0;
+  border-top: 2px solid var(--danger);
+  pointer-events: none;
+}
+
+.v-calendario-now::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-full);
+  background: var(--danger);
+}
+
+.v-calendario-block {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  padding: 3px 6px;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.v-calendario-block:hover {
+  background: color-mix(in srgb, var(--accent-soft) 70%, var(--accent) 12%);
+}
+
+.v-calendario-block:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.v-calendario-block.is-short {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.v-calendario-block-name {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.v-calendario-block-meta {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.v-calendario-block.is-running {
+  background: var(--success-soft);
+  box-shadow: inset 3px 0 0 var(--success);
+}
+
+.v-calendario-block.is-paused {
+  background: var(--warning-soft);
+  box-shadow: inset 3px 0 0 var(--warning);
+}
+
+.v-calendario-loose {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: var(--sp-2);
+  border-top: 1px solid var(--border);
+}
+
+.v-calendario-loose-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+  min-height: 30px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.v-calendario-loose-row:hover {
+  background: var(--bg-hover);
+}
+
+.v-calendario-loose-row:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.v-calendario-loose-name {
+  flex: 0 1 auto;
+  font-weight: var(--fw-medium);
+}
+
+.v-calendario-loose-desc {
+  flex: 1 1 auto;
+  color: var(--text-faint);
+}
+
+.v-calendario-loose-dur {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--text-muted);
+}
+
+/* diálogo "Adicionar horas" */
+.v-calendario-hours-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.v-calendario-hours-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr));
+  gap: var(--sp-3);
+}
+
+.v-calendario-hours-hint {
+  margin: calc(var(--sp-1) * -1) 0 0;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+}
+
+.v-calendario-hours-task {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.v-calendario-hours-task > .truncate {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+}
+
+.v-calendario-hours-task.is-empty {
+  color: var(--text-muted);
+}
+
+/* ------------------------------------------------------------------ celular */
+.v-calendario.is-phone {
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4) var(--sp-8);
+}
+
+.v-calendario.is-phone .v-calendario-bar {
+  gap: var(--sp-2);
+}
+
+.v-calendario.is-phone .v-calendario-title {
+  flex: 1 1 0;
+  order: 2;
+  font-size: var(--fs-lg);
+}
+
+.v-calendario.is-phone .v-calendario-nav {
+  order: 1;
+}
+
+.v-calendario.is-phone .v-calendario-bar-spacer {
+  display: none;
+}
+
+.v-calendario.is-phone .v-calendario-modes {
+  display: flex;
+  order: 3;
+  width: 100%;
+}
+
+.v-calendario.is-phone .v-calendario-modes .segmented-item {
+  flex: 1 1 0;
+}
+
+.v-calendario.is-phone .v-calendario-toggles {
+  order: 4;
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.v-calendario.is-phone .v-calendario-toggles .btn {
+  flex-shrink: 0;
+}
+
+/* grade compacta do mês */
+.v-calendario-mini {
+  display: flex;
+  flex-direction: column;
+  padding: var(--sp-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+}
+
+.v-calendario-mini-weekdays,
+.v-calendario-mini-row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.v-calendario-mini-weekday {
+  padding: 4px 0;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  text-align: center;
+}
+
+.v-calendario-mini-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 3px;
+  min-width: 0;
+  height: 46px;
+  padding-top: 5px;
+  border-radius: var(--r-md);
+  color: var(--text);
+}
+
+.v-calendario-mini-day.is-outside {
+  color: var(--text-faint);
+}
+
+.v-calendario-mini-day.is-weekend:not(.is-selected):not(.is-outside) .v-calendario-mini-num {
+  color: var(--text-muted);
+}
+
+.v-calendario-mini-day.is-selected {
+  background: var(--accent-soft);
+}
+
+.v-calendario-mini-day:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.v-calendario-mini-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-full);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium);
+}
+
+.v-calendario-mini-day.is-today .v-calendario-mini-num {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: var(--fw-semibold);
+}
+
+.v-calendario-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 6px;
+}
+
+.v-calendario-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: var(--r-full);
+  background: var(--text-faint);
+}
+
+.v-calendario-dot.is-demand {
+  background: var(--accent);
+}
+
+.v-calendario-dot.is-overdue {
+  background: var(--danger);
+}
+
+.v-calendario-dot.is-closed {
+  background: var(--border-strong);
+}
+
+.v-calendario-dot.is-start {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--text-faint);
+}
+
+.v-calendario-dots-more {
+  color: var(--text-faint);
+  font-size: 9px;
+  line-height: 1;
+}
+
+.v-calendario-selected {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.v-calendario-selected-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.v-calendario-selected-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: var(--fs-md);
+}
+
+.v-calendario-selected-title .strong::first-letter {
+  text-transform: uppercase;
+}
+
+.v-calendario-selected-title .faint {
+  font-size: var(--fs-xs);
+}
+
+.v-calendario-month-phone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+/* semana em lista */
+.v-calendario-week-phone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.v-calendario-wday {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.v-calendario-wday:last-child {
+  border-bottom: 0;
+}
+
+.v-calendario-wday-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.v-calendario-wday-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+  padding: 2px 4px 2px 0;
+  border-radius: var(--r-sm);
+}
+
+.v-calendario-wday-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-full);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+}
+
+.v-calendario-wday.is-today .v-calendario-wday-num {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.v-calendario-wday-name {
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+}
+
+.v-calendario-wday-name::first-letter {
+  text-transform: uppercase;
+}
+
+.v-calendario-wday-meta {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+.v-calendario.is-phone .v-calendario-add {
+  opacity: 1;
+}
+
+@media (max-width: 560px) {
+  .v-calendario-hours-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1100px) {
+  .v-calendario:not(.is-phone) .v-calendario-dayview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .v-calendario:not(.is-phone) .v-calendario-toggle .btn-label {
+    display: none;
+  }
+}
+
+/* grade mensal estreita (painel lateral aberto, janela média): chips mais enxutos, sem a marca de prioridade */
+@container vcal-month (max-width: 860px) {
+  .v-calendario-day .v-calendario-prio {
+    display: none;
+  }
+
+  .v-calendario-day .v-calendario-chip {
+    gap: 3px;
+    padding: 0 3px;
+  }
+
+  .v-calendario-day {
+    padding: 3px 2px 5px;
+  }
+}
+
+.v-calendario-overdue-toggle {
+  align-self: flex-start;
+}
+
+/* Contorno: no kit, button.status/.priority têm margem negativa + max-width: 100%; numa célula de largura
+ * automática o selo compacto fica preso em 14 px e o ícone encolhe para 4 px. Aqui o selo usa a própria largura. */
+.v-calendario-row .en-cell > button.status-compact,
+.v-calendario-row .en-cell > button.priority-compact {
+  max-width: none;
+}

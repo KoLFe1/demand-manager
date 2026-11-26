@@ -1,0 +1,399 @@
+/* Demand Manager — visualização "Hierarquia" (css/views/hierarquia.css). Prefixo .v-hierarquia / .hq-*; só tokens.
+ * Árvore plana (uma linha por nó) com recuo por nível (--en-indent × --hq-step).
+ */
+
+.v-hierarquia {
+  --hq-step: 22px;          /* recuo por nível */
+  --hq-twisty: 20px;        /* largura da seta de expandir */
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+  padding: var(--sp-5) var(--sp-6) var(--sp-12);
+}
+
+.hq-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+/* ---------- barra de expandir/recolher */
+.hq-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.hq-toolbar-label {
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+
+.hq-spacer {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hq-toolbar .btn-ghost {
+  color: var(--text-muted);
+}
+
+/* ---------- árvore */
+.hq-tree {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+}
+
+.v-hierarquia .hq-row.en-row,
+.v-hierarquia .hq-header {
+  padding-left: calc(var(--sp-2) + var(--en-indent, 0) * var(--hq-step));
+  padding-right: var(--sp-2);
+}
+
+/* as demandas ficam dentro de um envoltório: a borda inferior é dele/da linha, nunca dupla */
+.hq-dwrap {
+  position: relative;
+}
+
+.hq-dwrap > .en-row {
+  border-bottom: 1px solid var(--border);
+}
+
+.hq-tree > :last-child,
+.hq-tree > .hq-dwrap:last-child > .en-row {
+  border-bottom: 0;
+}
+
+/* seta de expandir/recolher */
+.hq-twisty {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--hq-twisty);
+  height: var(--hq-twisty);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+.hq-twisty.is-leaf {
+  cursor: default;
+}
+
+/* toque: área de clique ~32 px sem mudar o layout (mesmo recurso de panels.css) */
+@media (pointer: coarse) {
+  .hq-twisty:not(.is-leaf) {
+    position: relative;
+  }
+  .hq-twisty:not(.is-leaf)::before {
+    content: '';
+    position: absolute;
+    inset: -7px;
+  }
+}
+
+.hq-twisty:not(.is-leaf):hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.hq-twisty .icon {
+  transition: transform var(--dur) var(--ease);
+}
+
+.hq-twisty.is-open .icon {
+  transform: rotate(90deg);
+}
+
+/* ---------- linhas de projeto e grupo (cabeçalhos) */
+.hq-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+  min-height: calc(var(--row-h) + 4px);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease);
+}
+
+.hq-header:hover {
+  background: var(--bg-hover);
+}
+
+.hq-header:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.hq-header.is-locked {
+  cursor: default;
+}
+
+.hq-header.is-archived {
+  opacity: 0.7;
+}
+
+.hq-header-name {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: baseline;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.hq-header-title {
+  min-width: 0;
+  color: var(--text);
+  font-weight: var(--fw-semibold);
+}
+
+.hq-header-code {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.02em;
+}
+
+.hq-header-meta {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+.hq-group-icon {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.hq-group .hq-header-title {
+  color: var(--text-muted);
+}
+
+.hq-progress {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  width: 132px;
+}
+
+.hq-progress > .progress {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hq-progress-pct {
+  min-width: 32px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  text-align: right;
+}
+
+/* ---------- demandas */
+.hq-demand .en-name {
+  font-weight: var(--fw-medium);
+}
+
+.hq-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 46px;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+/* linha aberta no painel lateral */
+.v-hierarquia .hq-row.en-row.is-selected {
+  background: var(--accent-soft);
+}
+
+/* ---------- tarefas */
+.hq-subtask .en-name {
+  color: var(--text-muted);
+}
+
+/* itens encerrados: o título já vem riscado/esmaecido; os controles também recuam */
+.v-hierarquia .hq-row.is-done .en-row-body > .en-cell:not(.en-cell-title),
+.v-hierarquia .hq-row.is-cancelled .en-row-body > .en-cell:not(.en-cell-title) {
+  opacity: 0.65;
+}
+
+/* ancestral que só aparece por causa de um descendente que passa nos filtros */
+.v-hierarquia .hq-context {
+  opacity: 0.55;
+}
+
+.v-hierarquia .hq-context:hover,
+.v-hierarquia .hq-context:focus-within {
+  opacity: 0.85;
+}
+
+/* ---------- "+" e menu: aparecem com o ponteiro/foco (sempre visíveis no toque) */
+.hq-add-spacer {
+  display: inline-block;
+  flex-shrink: 0;
+  width: var(--ctl-h-sm);
+}
+
+@media (hover: hover) {
+  .v-hierarquia .hq-add,
+  .v-hierarquia .hq-header .hq-menu {
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease);
+  }
+
+  .v-hierarquia .hq-row:hover .hq-add,
+  .v-hierarquia .hq-row:focus-within .hq-add,
+  .v-hierarquia .hq-header:hover .hq-menu,
+  .v-hierarquia .hq-header:focus-within .hq-menu,
+  .v-hierarquia .hq-add:focus-visible,
+  .v-hierarquia .hq-menu:focus-visible {
+    opacity: 1;
+  }
+}
+
+/* ---------- criação em linha e dica de nó vazio */
+.hq-addrow,
+.hq-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-height: var(--row-h);
+  padding: 2px var(--sp-2) 2px calc(var(--sp-2) + var(--en-indent, 0) * var(--hq-step) + var(--hq-twisty));
+  border-bottom: 1px solid var(--border);
+}
+
+.hq-addrow {
+  background: var(--bg-subtle);
+}
+
+.hq-addrow > .en-quickadd {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-left: var(--sp-2);
+}
+
+.hq-addrow-close {
+  color: var(--text-faint);
+}
+
+.hq-hint {
+  gap: var(--sp-2);
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+
+.hq-hint-action {
+  color: var(--accent-text);
+}
+
+/* ---------- fim da página desenhada (árvore grande): "Mostrar mais" */
+.hq-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-2);
+  min-height: var(--row-h);
+  padding: var(--sp-1) var(--sp-2) var(--sp-1) calc(var(--sp-2) + var(--hq-twisty));
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+  background: var(--bg-subtle);
+}
+
+.hq-more-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.hq-more-action {
+  color: var(--accent-text);
+}
+
+/* ---------- arrastar e soltar: linha de inserção recuada até o nível do destino */
+.v-hierarquia .hq-row.is-drop-target.drop-before::after,
+.v-hierarquia .hq-row.is-drop-target.drop-after::after {
+  left: calc(var(--sp-2) + var(--en-indent, 0) * var(--hq-step) + var(--hq-twisty));
+  right: var(--sp-2);
+}
+
+.hq-dwrap.is-drop-target.drop-inside > .en-row,
+.v-hierarquia .hq-header.is-drop-target.drop-inside,
+.v-hierarquia .hq-row.en-row.is-drop-target.drop-inside {
+  background: var(--accent-soft);
+}
+
+.hq-dwrap.is-drop-target.drop-inside {
+  z-index: 1;
+}
+
+.v-hierarquia .hq-row[draggable="true"] {
+  -webkit-user-drag: element;
+}
+
+/* ---------- estado vazio */
+.v-hierarquia .hq-empty {
+  padding: var(--sp-10) var(--sp-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-lg);
+}
+
+/* ---------- celular */
+@media (max-width: 640px) {
+  .v-hierarquia {
+    --hq-step: 12px;
+    --hq-twisty: 18px;
+    gap: var(--sp-2);
+    padding: var(--sp-3) var(--sp-4) var(--sp-8);
+  }
+
+  .hq-toolbar-label,
+  .hq-expand-all .btn-label,
+  .hq-collapse-all .btn-label {
+    display: none;
+  }
+
+  .hq-header-code {
+    display: none;
+  }
+
+  .hq-header-meta {
+    font-size: var(--fs-xs);
+  }
+
+  .hq-progress {
+    width: 64px;
+  }
+
+  .hq-progress-pct {
+    display: none;
+  }
+
+  .hq-demand .en-cell-progress {
+    width: 84px;
+  }
+
+  .hq-count {
+    min-width: 0;
+  }
+
+  .hq-add-spacer {
+    display: none;
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "id": "./index.html",
+  "name": "Demand Manager",
+  "short_name": "Demandas",
+  "description": "Gestão pessoal de demandas, tarefas, prazos e tempo — funciona offline e sincroniza entre dispositivos.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "categories": ["productivity", "business"],
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "assets/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Minha Semana", "short_name": "Semana", "url": "./index.html#/semana", "icons": [{ "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml" }] },
+    { "name": "Demandas", "url": "./index.html#/demandas", "icons": [{ "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml" }] },
+    { "name": "Kanban", "url": "./index.html#/kanban", "icons": [{ "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml" }] }
+  ]
+}

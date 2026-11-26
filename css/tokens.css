@@ -1,0 +1,332 @@
+/* Demand Manager — variáveis de design (tokens).
+ *
+ * Tema: o padrão segue a preferência do sistema (prefers-color-scheme).
+ *       <html data-theme="light"> ou <html data-theme="dark"> força um tema.
+ * Regra: as telas NUNCA usam cor literal — só estas variáveis.
+ *
+ * Todos os pares texto/fundo abaixo foram conferidos para contraste WCAG AA (≥ 4,5:1):
+ *   --text, --text-muted e --text-faint sobre --bg, --bg-subtle e --bg-elevated;
+ *   cada tom sólido (--danger, --st-blue, --p1…) sobre --bg e sobre o seu próprio tom "-soft".
+ * Ao mexer nas cores, confira de novo os pares.
+ */
+
+/* ------------------------------------------------------------------ medidas (iguais nos dois temas) */
+:root {
+  /* tipografia */
+  --font: "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "Cascadia Code", Consolas, "SF Mono", monospace;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 15px;
+  --fs-xl: 18px;
+  --fs-2xl: 24px;
+  --lh: 1.45;
+  --lh-tight: 1.25;
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+
+  /* espaços: escala de 4 px */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 28px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+
+  /* raios */
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 10px;
+  --r-full: 999px;
+
+  /* densidade */
+  --ctl-h: 28px;      /* altura dos controles */
+  --ctl-h-sm: 24px;   /* controles pequenos */
+  --ctl-h-touch: 40px;/* controles em telas de toque */
+  --row-h: 34px;      /* linha de lista */
+
+  /* estrutura da casca */
+  --sidebar-w: 232px;
+  --topbar-h: 44px;
+  --panel-w: 520px;
+  --tabbar-h: 0px;    /* a casca define a altura da barra de abas no celular (os avisos sobem junto) */
+
+  /* camadas */
+  --z-panel: 40;
+  --z-overlay: 100;
+  --z-toast: 200;
+
+  /* movimento */
+  --dur: 140ms;
+  --dur-fast: 120ms;
+  --dur-slow: 160ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* áreas seguras (entalhe / barra de gestos do celular) */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+
+/* ------------------------------------------------------------------ tema claro (padrão) */
+:root {
+  color-scheme: light;
+
+  --bg: #ffffff;
+  --bg-subtle: #f7f7f5;
+  --bg-elevated: #ffffff;
+  --bg-hover: rgba(55, 53, 47, 0.06);
+  --bg-active: rgba(55, 53, 47, 0.1);
+  --bg-inset: #f1f1ef;                      /* trilhos, campos embutidos, esqueletos */
+  --border: #e9e9e6;
+  --border-strong: #d4d4d0;
+  --text: #1d1d1b;
+  --text-muted: #5f5f5a;
+  --text-faint: #6e6e68;
+
+  --accent: #4f5bd5;                        /* preenchimentos (botão primário, seleção) */
+  --accent-hover: #4450c8;
+  --accent-contrast: #ffffff;               /* texto sobre --accent */
+  --accent-soft: #eceefb;
+  --accent-text: #4450c8;                   /* texto/ícone na cor de destaque sobre --bg */
+  --focus-ring: #4f5bd5;
+
+  --danger: #c4302f;
+  --danger-soft: #fdecec;
+  --warning: #96590a;
+  --warning-soft: #fbf0d9;
+  --success: #17794a;
+  --success-soft: #e3f4ea;
+  --info: #1f66c7;
+  --info-soft: #e5effc;
+  --on-solid: #ffffff;                      /* texto sobre um tom sólido (selos preenchidos) */
+
+  /* status: tom sólido (ponto, ícone, texto) + tom suave (fundo) */
+  --st-gray: #696964;
+  --st-gray-soft: #f0f0ee;
+  --st-slate: #4f6072;
+  --st-slate-soft: #e9edf2;
+  --st-blue: #1f66c7;
+  --st-blue-soft: #e5effc;
+  --st-amber: #96590a;
+  --st-amber-soft: #fbf0d9;
+  --st-red: #c4302f;
+  --st-red-soft: #fdecec;
+  --st-violet: #7143c9;
+  --st-violet-soft: #f0eafc;
+  --st-green: #17794a;
+  --st-green-soft: #e3f4ea;
+  --st-neutral: #6d6d67;
+  --st-neutral-soft: #f2f2f0;
+
+  /* prioridade (marcação discreta) */
+  --p1: #c43c1c;
+  --p2: #9a5b0a;
+  --p3: #696964;
+  --p4: #6e6e68;
+  --p-off: 0.42;                            /* opacidade das barras inativas (visíveis, mas discretas) */
+
+  /* gráficos: paleta categórica validada (ordem fixa — não reordenar), grade e eixos */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
+  --chart-6: #008300;
+  --chart-7: #6250d6;
+  --chart-8: #e34948;
+  --chart-muted: #c9c9c4;                   /* barras/linhas de contexto (desenfatizadas) */
+  --chart-grid: #ececea;
+  --chart-axis: #d4d4d0;
+  --chart-track: #ededeb;
+
+  --shadow-sm: 0 1px 2px rgba(15, 15, 15, 0.06);
+  --shadow-md: 0 4px 14px rgba(15, 15, 15, 0.1), 0 0 0 1px rgba(15, 15, 15, 0.05);
+  --shadow-lg: 0 16px 48px rgba(15, 15, 15, 0.18), 0 0 0 1px rgba(15, 15, 15, 0.06);
+  --backdrop: rgba(15, 15, 15, 0.38);
+  --scrollbar: rgba(55, 53, 47, 0.22);
+  --scrollbar-hover: rgba(55, 53, 47, 0.4);
+}
+
+/* ------------------------------------------------------------------ tema escuro
+ * Os valores aparecem duas vezes de propósito: uma para "seguir o sistema" e outra para o tema forçado
+ * (CSS puro não tem como reaproveitar o bloco). Mantenha os dois blocos idênticos.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --bg: #17171a;
+    --bg-subtle: #1c1c20;
+    --bg-elevated: #222226;
+    --bg-hover: rgba(255, 255, 255, 0.06);
+    --bg-active: rgba(255, 255, 255, 0.1);
+    --bg-inset: #111113;
+    --border: #2b2b30;
+    --border-strong: #3c3c43;
+    --text: #ececef;
+    --text-muted: #a4a4ac;
+    --text-faint: #8e8e97;
+
+    --accent: #5f6ad8;
+    --accent-hover: #5560cf;
+    --accent-contrast: #ffffff;
+    --accent-soft: #272a4d;
+    --accent-text: #a1a8f5;
+    --focus-ring: #8b94f0;
+
+    --danger: #f07a75;
+    --danger-soft: #3d2020;
+    --warning: #e0a443;
+    --warning-soft: #3a2c12;
+    --success: #56c28a;
+    --success-soft: #17342a;
+    --info: #6ba6f2;
+    --info-soft: #1b2c47;
+    --on-solid: #141416;
+
+    --st-gray: #9a9aa2;
+    --st-gray-soft: #2a2a2f;
+    --st-slate: #93a4b8;
+    --st-slate-soft: #262d36;
+    --st-blue: #6ba6f2;
+    --st-blue-soft: #1b2c47;
+    --st-amber: #e0a443;
+    --st-amber-soft: #3a2c12;
+    --st-red: #f07a75;
+    --st-red-soft: #3d2020;
+    --st-violet: #b294f2;
+    --st-violet-soft: #2f2647;
+    --st-green: #56c28a;
+    --st-green-soft: #17342a;
+    --st-neutral: #8f8f98;
+    --st-neutral-soft: #27272b;
+
+    --p1: #f08a5d;
+    --p2: #e0a443;
+    --p3: #a4a4ac;
+    --p4: #8e8e97;
+    --p-off: 0.55;
+
+    --chart-1: #3987e5;
+    --chart-2: #d95926;
+    --chart-3: #199e70;
+    --chart-4: #c98500;
+    --chart-5: #d55181;
+    --chart-6: #0ca30c;
+    --chart-7: #9085e9;
+    --chart-8: #e66767;
+    --chart-muted: #4a4a52;
+    --chart-grid: #29292e;
+    --chart-axis: #3c3c43;
+    --chart-track: #2b2b30;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.07);
+    --shadow-lg: 0 18px 56px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    --backdrop: rgba(0, 0, 0, 0.58);
+    --scrollbar: rgba(255, 255, 255, 0.18);
+    --scrollbar-hover: rgba(255, 255, 255, 0.34);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #17171a;
+  --bg-subtle: #1c1c20;
+  --bg-elevated: #222226;
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-active: rgba(255, 255, 255, 0.1);
+  --bg-inset: #111113;
+  --border: #2b2b30;
+  --border-strong: #3c3c43;
+  --text: #ececef;
+  --text-muted: #a4a4ac;
+  --text-faint: #8e8e97;
+
+  --accent: #5f6ad8;
+  --accent-hover: #5560cf;
+  --accent-contrast: #ffffff;
+  --accent-soft: #272a4d;
+  --accent-text: #a1a8f5;
+  --focus-ring: #8b94f0;
+
+  --danger: #f07a75;
+  --danger-soft: #3d2020;
+  --warning: #e0a443;
+  --warning-soft: #3a2c12;
+  --success: #56c28a;
+  --success-soft: #17342a;
+  --info: #6ba6f2;
+  --info-soft: #1b2c47;
+  --on-solid: #141416;
+
+  --st-gray: #9a9aa2;
+  --st-gray-soft: #2a2a2f;
+  --st-slate: #93a4b8;
+  --st-slate-soft: #262d36;
+  --st-blue: #6ba6f2;
+  --st-blue-soft: #1b2c47;
+  --st-amber: #e0a443;
+  --st-amber-soft: #3a2c12;
+  --st-red: #f07a75;
+  --st-red-soft: #3d2020;
+  --st-violet: #b294f2;
+  --st-violet-soft: #2f2647;
+  --st-green: #56c28a;
+  --st-green-soft: #17342a;
+  --st-neutral: #8f8f98;
+  --st-neutral-soft: #27272b;
+
+  --p1: #f08a5d;
+  --p2: #e0a443;
+  --p3: #a4a4ac;
+  --p4: #8e8e97;
+  --p-off: 0.55;
+
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-6: #0ca30c;
+  --chart-7: #9085e9;
+  --chart-8: #e66767;
+  --chart-muted: #4a4a52;
+  --chart-grid: #29292e;
+  --chart-axis: #3c3c43;
+  --chart-track: #2b2b30;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.07);
+  --shadow-lg: 0 18px 56px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --backdrop: rgba(0, 0, 0, 0.58);
+  --scrollbar: rgba(255, 255, 255, 0.18);
+  --scrollbar-hover: rgba(255, 255, 255, 0.34);
+}
+
+/* Em telas de toque os alvos crescem um pouco (dedo ≠ ponteiro). */
+@media (pointer: coarse) {
+  :root {
+    --row-h: 40px;
+    --ctl-h: 34px;
+    --ctl-h-sm: 30px;
+  }
+}
+
+/* Sem animações para quem pede menos movimento. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur: 0ms;
+    --dur-fast: 0ms;
+    --dur-slow: 0ms;
+  }
+}

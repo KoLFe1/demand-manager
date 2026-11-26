@@ -1,0 +1,717 @@
+/* Demand Manager — tela "Minha Semana" (css/views/semana.css). Prefixo .v-semana; só tokens. */
+
+.v-semana {
+  padding: var(--sp-5) var(--sp-6) var(--sp-12);
+}
+
+.v-semana-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  max-width: 1120px;
+  margin: 0 auto;
+  min-width: 0;
+  /* as larguras abaixo seguem o espaço da tela (que encolhe com o painel lateral aberto), não a janela */
+  container: semana / inline-size;
+}
+
+/* ------------------------------------------------------------------ cabeçalho / navegador */
+.v-semana-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.v-semana-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.v-semana-arrows {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.v-semana-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-md);
+  color: var(--text);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  transition: background-color var(--dur-fast) var(--ease);
+}
+
+.v-semana-range:hover {
+  background: var(--bg-hover);
+}
+
+.v-semana-range:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.v-semana-range .icon {
+  color: var(--text-faint);
+}
+
+.v-semana-head-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* ------------------------------------------------------------------ aviso de transferência */
+.v-semana-carry-banner .alert-actions {
+  flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------------------ comparação planejado × realizado */
+.v-semana-compare {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.v-semana-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sp-3);
+}
+
+.v-semana-stat {
+  align-items: flex-start;
+}
+
+.v-semana-stat .stat-label > .truncate {
+  white-space: nowrap;
+}
+
+.v-semana-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: var(--sp-3);
+}
+
+.v-semana-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+}
+
+.v-semana-card-title {
+  color: var(--text);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+}
+
+.v-semana-card-sub {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-tight);
+}
+
+.v-semana-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.v-semana-health {
+  justify-content: space-between;
+}
+
+.v-semana-adherence {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.v-semana-adherence .ring {
+  flex-shrink: 0;
+}
+
+.v-semana-load {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+}
+
+.v-semana-load-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.v-semana-load-value {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+.v-semana-load-bar {
+  width: 100%;
+}
+
+.v-semana-load-bar .progress-track {
+  flex: 1 1 auto;
+}
+
+.v-semana-trend {
+  gap: var(--sp-2);
+}
+
+.v-semana-chart {
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------------ estado vazio */
+.v-semana-empty-wrap {
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-lg);
+  background: var(--bg-subtle);
+}
+
+.v-semana-empty .empty-text {
+  max-width: 520px;
+}
+
+/* ------------------------------------------------------------------ seções */
+.v-semana-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.v-semana-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.v-semana-section-head .section-icon {
+  color: var(--text-faint);
+}
+
+.v-semana-section.is-danger .section-icon {
+  color: var(--danger);
+}
+
+.v-semana-section.is-warning .section-icon {
+  color: var(--warning);
+}
+
+.v-semana-section.is-success .section-icon {
+  color: var(--success);
+}
+
+.v-semana-section.is-empty .section-count {
+  opacity: 0.7;
+}
+
+.v-semana-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.v-semana-desc {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+
+.v-semana-none {
+  margin: 0;
+  padding: 8px var(--sp-3);
+  border: 1px dashed var(--border);
+  border-radius: var(--r-md);
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+
+/* "Ver todas as N" / "Ver na lista" abaixo de uma lista de acompanhamento longa. */
+.v-semana-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.v-semana-list {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+}
+
+.v-semana-list > .en-row:first-child {
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+
+/* linhas: marcadores e ações próprios da semana */
+.v-semana-col {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.v-semana-marks {
+  flex-wrap: wrap;
+  max-width: 300px;
+}
+
+.v-semana-mark {
+  height: 18px;
+  font-size: var(--fs-xs);
+}
+
+.v-semana-mark.badge-neutral {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--text-muted);
+}
+
+.v-semana-when {
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+.v-semana-plan-btn,
+.v-semana-add-btn {
+  color: var(--text-faint);
+}
+
+.v-semana-plan-btn:hover,
+.v-semana-add-btn:hover {
+  color: var(--accent-text);
+}
+
+.v-semana-row.is-removed .en-name,
+.v-semana-row.is-outcome-removed .en-name {
+  color: var(--text-muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--border-strong);
+}
+
+.v-semana-missing {
+  gap: var(--sp-2);
+  color: var(--text-faint);
+  cursor: default;
+}
+
+.v-semana-missing:hover {
+  background: var(--bg);
+}
+
+.v-semana-missing-text {
+  flex: 1 1 auto;
+  font-style: italic;
+}
+
+/* agrupamento por dia */
+.v-semana-day {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 6px var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+}
+
+.v-semana-day-name {
+  display: inline-block;
+}
+
+.v-semana-day-name::first-letter {
+  text-transform: uppercase;
+}
+
+.v-semana-day.is-today {
+  color: var(--accent-text);
+}
+
+.v-semana-day-count {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-weight: var(--fw-normal);
+}
+
+.v-semana-day-today {
+  height: 16px;
+}
+
+/* rodapé de Programadas */
+.v-semana-planblock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.v-semana-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-1);
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+
+/* ------------------------------------------------------------------ diálogos */
+.v-semana-add,
+.v-semana-carry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.v-semana-add-tools {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.v-semana-add-tabs {
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.v-semana-add-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.v-semana-add-search {
+  width: 100%;
+}
+
+.v-semana-add-list,
+.v-semana-carry-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 160px;
+  max-height: min(52vh, 460px);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+}
+
+.v-semana-carry-list {
+  min-height: 0;
+}
+
+.v-semana-cand-group + .v-semana-cand-group {
+  border-top: 1px solid var(--border);
+}
+
+.v-semana-cand-group-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+  padding: 6px var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
+  font-size: var(--fs-sm);
+}
+
+.v-semana-cand-group-name {
+  min-width: 0;
+  color: var(--text);
+  font-weight: var(--fw-semibold);
+}
+
+.v-semana-cand-group-project {
+  min-width: 0;
+  color: var(--text-faint);
+}
+
+.v-semana-cand-group-count {
+  margin-left: auto;
+  color: var(--text-faint);
+}
+
+.v-semana-cand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  min-width: 0;
+  padding: 6px var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  transition: background-color var(--dur-fast) var(--ease);
+}
+
+.v-semana-cand:last-child {
+  border-bottom: 0;
+}
+
+.v-semana-cand:hover {
+  background: var(--bg-subtle);
+}
+
+.v-semana-cand.is-selected {
+  background: var(--accent-soft);
+}
+
+.v-semana-cand-check {
+  flex: 1 1 auto;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.v-semana-cand-check {
+  max-width: 100%;
+}
+
+.v-semana-cand-check .checkbox-label {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.v-semana-cand-main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.v-semana-cand-title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.v-semana-cand-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v-semana-cand-parent {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+}
+
+.v-semana-cand-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+}
+
+.v-semana-cand-est {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.v-semana-add-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-3);
+}
+
+.v-semana-add-hint,
+.v-semana-carry-text {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+
+.v-semana-carry-text {
+  color: var(--text-muted);
+}
+
+/* ------------------------------------------------------------------ áreas médias (janela menor ou painel aberto) */
+@container semana (max-width: 860px) {
+  .v-semana-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* linhas em duas faixas: título em cima, marcadores e controles embaixo (como no celular) */
+  .v-semana-list .en-row {
+    align-items: flex-start;
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+
+  .v-semana-list .en-row-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px var(--gap);
+    min-width: 0;
+  }
+
+  .v-semana-list .en-row-body > .en-cell-title {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .v-semana-list .en-row-body > .en-cell-status:not(.is-compact),
+  .v-semana-list .en-row-body > .en-cell-due {
+    width: auto;
+    min-width: 0;
+  }
+
+  .v-semana-list .en-row-body > .en-cell-flags {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .v-semana-list .en-row-body > .en-cell-status .status-label {
+    display: none;
+  }
+
+  .v-semana-marks {
+    max-width: none;
+  }
+}
+
+@container semana (max-width: 600px) {
+  .v-semana-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ------------------------------------------------------------------ celular */
+@media (max-width: 640px) {
+  .v-semana {
+    padding: var(--sp-3) var(--sp-3) var(--sp-10);
+  }
+
+  .v-semana-inner {
+    gap: var(--sp-4);
+  }
+
+  .v-semana-head {
+    align-items: stretch;
+  }
+
+  .v-semana-nav {
+    flex: 1 1 100%;
+    gap: var(--sp-1) var(--sp-2);
+  }
+
+  .v-semana-range {
+    order: -1;
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    padding: 0 4px;
+    font-size: var(--fs-lg);
+  }
+
+  .v-semana-head-actions {
+    flex: 1 1 100%;
+  }
+
+  .v-semana-head-actions .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .v-semana-stats {
+    gap: var(--sp-2);
+  }
+
+  .v-semana-stat {
+    padding: 10px 12px;
+  }
+
+  .v-semana-stat .stat-value {
+    font-size: var(--fs-xl);
+  }
+
+  .v-semana-stat .stat-label > .truncate {
+    white-space: normal;
+  }
+
+  .v-semana-marks {
+    max-width: none;
+  }
+
+  .v-semana-cand {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .v-semana-cand-meta {
+    padding-left: 26px;
+  }
+
+  .v-semana-add-list,
+  .v-semana-carry-list {
+    max-height: 48vh;
+  }
+}
+
+/* marcador discreto de item planejado (o "adicionado durante a semana" é que se destaca) */
+.v-semana-kind {
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  /* no celular o marcador "Planejada" (o caso comum) some: só os que diferenciam ficam */
+  .v-semana-kind {
+    display: none;
+  }
+
+  .overlay-sheet .v-semana-add-list,
+  .overlay-sheet .v-semana-carry-list {
+    max-height: 56vh;
+  }
+}

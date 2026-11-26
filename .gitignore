@@ -1,0 +1,23 @@
+# Fica só na cópia local (não vai para o GitHub/site publicado):
+# dados de demonstração, testes (fixtures com dados de exemplo), ferramentas, páginas de dev e documentação interna.
+js/dev/
+tests/
+tools/
+dev/
+docs/
+
+# Python
+__pycache__/
+*.pyc
+
+# capturas de tela e saídas locais
+shots/
+*.png
+!assets/*.png
+
+# sistema / editores
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/

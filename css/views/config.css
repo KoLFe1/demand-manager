@@ -1,0 +1,344 @@
+/* Demand Manager — tela "Configurações" (css/views/config.css). Prefixo .v-config; só tokens. */
+
+.v-config {
+  padding: var(--sp-6) var(--sp-6) var(--sp-12);
+}
+
+.v-config-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+/* índice das seções */
+.v-config-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  margin-bottom: calc(var(--sp-2) * -1);
+}
+
+.v-config-toc-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.v-config-toc-item:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.v-config-toc-item .icon {
+  color: var(--text-faint);
+}
+
+/* seções */
+.v-config-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  scroll-margin-top: var(--sp-4);
+}
+
+.v-config-section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.v-config-section-title {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+}
+
+.v-config-section-desc {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.v-config-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+}
+
+.v-config-subtitle {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+}
+
+.v-config-divider {
+  height: 1px;
+  margin: 0 calc(var(--sp-5) * -1);
+  background: var(--border);
+}
+
+.v-config-note {
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+
+/* formulário do Supabase */
+.v-config-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.v-config-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--sp-3) var(--sp-4);
+}
+
+.v-config-key .input-el {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+
+.v-config-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.v-config-danger-text {
+  color: var(--danger);
+}
+
+.v-config-sync {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+/* linhas de preferência */
+.v-config-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+
+.v-config-row + .v-config-row {
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--border);
+}
+
+.v-config-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.v-config-row-label {
+  font-weight: var(--fw-medium);
+}
+
+.v-config-row-hint {
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+
+.v-config-row-control {
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.v-config-row-control .input:not(.input-number) {
+  width: 200px;
+}
+
+.v-config-row-control .input-number {
+  width: 110px;
+}
+
+/* lixeira */
+.v-config-trash {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.v-config-trash-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+.v-config-trash-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+}
+
+.v-config-trash-item + .v-config-trash-item {
+  border-top: 1px solid var(--border);
+}
+
+.v-config-trash-icon {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.v-config-trash-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: var(--lh-tight);
+}
+
+.v-config-trash-name {
+  display: block;
+}
+
+.v-config-trash-when {
+  margin-top: 2px;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+}
+
+/* status */
+.v-config-status-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.v-config-status {
+  display: grid;
+  grid-template-columns: 180px 150px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0;
+}
+
+.v-config-status + .v-config-status {
+  border-top: 1px solid var(--border);
+}
+
+.v-config-status-cat {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.v-config-status-desc {
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+
+/* sobre */
+.v-config-about {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: 0;
+}
+
+.v-config-about-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  font-size: var(--fs-sm);
+}
+
+.v-config-about-row dt {
+  color: var(--text-muted);
+}
+
+.v-config-about-row dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+/* celular */
+@media (max-width: 767.98px) {
+  .v-config {
+    padding: var(--sp-4) var(--sp-3) var(--sp-8);
+  }
+
+  .v-config-inner {
+    gap: var(--sp-6);
+  }
+
+  .v-config-toc {
+    flex-wrap: nowrap;
+    margin-inline: calc(var(--sp-3) * -1);
+    padding-inline: var(--sp-3);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .v-config-toc::-webkit-scrollbar {
+    display: none;
+  }
+
+  .v-config-toc-item {
+    flex-shrink: 0;
+  }
+
+  .v-config-card {
+    padding: var(--sp-4);
+  }
+
+  .v-config-divider {
+    margin-inline: calc(var(--sp-4) * -1);
+  }
+
+  .v-config-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .v-config-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--sp-2);
+  }
+
+  .v-config-row-control {
+    justify-content: flex-start;
+  }
+
+  .v-config-row-control .input:not(.input-number) {
+    width: 100%;
+  }
+
+  .v-config-status {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .v-config-status-desc {
+    grid-column: 1 / -1;
+    margin-top: -4px;
+  }
+
+  .v-config-about-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .v-config-about-row dd {
+    text-align: left;
+  }
+}

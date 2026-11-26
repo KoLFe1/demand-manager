@@ -1,0 +1,962 @@
+/* Demand Manager — estilos da visualização "Backlog" (css/views/backlog.css).
+ * Prefixo .v-backlog; só variáveis de css/tokens.css (nenhuma cor literal).
+ *
+ *   .v-backlog-head      descrição + Tarefas/Demandas
+ *   .v-backlog-summary   resumo para o grooming (indicadores que também filtram: "lentes")
+ *   .v-backlog-add       "Registrar no backlog" + escolha da demanda
+ *   .v-backlog-group     cartão de um grupo: cabeçalho + linhas (.v-backlog-item > .en-row)
+ *   .v-backlog-bar       barra fixa das ações sobre a seleção
+ */
+
+.v-backlog {
+  padding: var(--sp-5) var(--sp-6) var(--sp-8);
+}
+
+.v-backlog-inner {
+  container-type: inline-size;
+  container-name: vbacklog;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+/* ------------------------------------------------------------------ cabeçalho */
+.v-backlog-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2) var(--sp-4);
+}
+
+.v-backlog-lead {
+  flex: 1 1 320px;
+  min-width: 0;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+}
+
+.v-backlog-mode {
+  flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------------ resumo */
+.v-backlog-summary {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--border);
+}
+
+.v-backlog-stat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
+  padding: var(--sp-3) var(--sp-4);
+  border: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+
+.v-backlog-stat-value {
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+}
+
+.v-backlog-stat-label {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v-backlog-stat-hint {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v-backlog-stat.is-lens {
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease);
+}
+
+.v-backlog-stat.is-lens:not(:disabled):hover {
+  background: var(--bg-subtle);
+}
+
+.v-backlog-stat.is-lens:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.v-backlog-stat.is-lens:disabled {
+  cursor: default;
+}
+
+.v-backlog-stat.is-lens:disabled .v-backlog-stat-value {
+  color: var(--text-faint);
+}
+
+.v-backlog-stat.tone-warn .v-backlog-stat-value {
+  color: var(--warning);
+}
+
+.v-backlog-stat.tone-danger .v-backlog-stat-value {
+  color: var(--danger);
+}
+
+.v-backlog-stat.is-active,
+.v-backlog-stat.is-active:not(:disabled):hover {
+  background: var(--accent-soft);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.v-backlog-stat.is-active .v-backlog-stat-label {
+  color: var(--accent-text);
+  font-weight: var(--fw-medium);
+}
+
+.v-backlog-stat-clear {
+  position: absolute;
+  top: var(--sp-2);
+  right: var(--sp-2);
+  color: var(--accent-text);
+}
+
+@container vbacklog (max-width: 860px) {
+  .v-backlog-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* estreito: o resumo vira uma faixa que rola na horizontal (dentro dela mesma) */
+@container vbacklog (max-width: 560px) {
+  .v-backlog-summary {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(112px, 1fr);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .v-backlog-summary::-webkit-scrollbar {
+    display: none;
+  }
+
+  .v-backlog-stat {
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .v-backlog-stat-value {
+    font-size: var(--fs-lg);
+  }
+
+  .v-backlog-stat-label {
+    white-space: normal;
+  }
+
+  .v-backlog-stat-hint {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------ registrar no backlog */
+.v-backlog-add {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-width: 0;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.v-backlog-add:focus-within {
+  border-color: var(--border-strong);
+}
+
+.v-backlog-add-field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.v-backlog-add-demand {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 300px;
+  height: var(--ctl-h);
+  padding: 0 var(--sp-2) 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-subtle);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.v-backlog-add-demand:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+
+.v-backlog-add-demand:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.v-backlog-add-demand.is-empty {
+  color: var(--text-muted);
+}
+
+.v-backlog-add-demand .icon {
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+
+.v-backlog-add-demand-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ ferramentas na barra de filtros */
+.v-backlog-tool {
+  color: var(--text-muted);
+}
+
+.v-backlog-tool .icon {
+  color: var(--text-faint);
+}
+
+@container fb (max-width: 560px) {
+  .v-backlog-tool .btn-label,
+  .v-backlog-tool .icon:last-child {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------ grupos */
+.v-backlog-groups {
+  --v-backlog-lead: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.v-backlog-groups.has-dnd {
+  --v-backlog-lead: 58px;
+}
+
+.v-backlog-group {
+  min-width: 0;
+  overflow: clip;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+}
+
+.v-backlog-group.is-drop-target {
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 1px var(--focus-ring);
+}
+
+.v-backlog-group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 38px;
+  padding: 0 var(--sp-2) 0 var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+
+.v-backlog-group.is-collapsed .v-backlog-group-head {
+  border-bottom: 0;
+}
+
+.v-backlog-groups.has-dnd .v-backlog-group-head {
+  padding-left: calc(var(--sp-3) + 22px);
+}
+
+.v-backlog-group-toggle {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+  height: 28px;
+  padding: 0 var(--sp-2) 0 4px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.v-backlog-group-toggle:hover {
+  background: var(--bg-hover);
+}
+
+.v-backlog-group-toggle:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 0;
+}
+
+.v-backlog-chevron {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.v-backlog-group.is-collapsed .v-backlog-chevron {
+  transform: rotate(-90deg);
+}
+
+.v-backlog-group-icon {
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+
+.v-backlog-group-code {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+}
+
+.v-backlog-group-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v-backlog-group-sub {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 200px;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-normal);
+}
+
+.v-backlog-group-count {
+  flex-shrink: 0;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: var(--r-full);
+  background: var(--bg-inset);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  text-align: center;
+}
+
+.v-backlog-group-spacer {
+  flex: 1 1 auto;
+}
+
+.v-backlog-group-est {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.v-backlog-group-est .icon {
+  color: var(--text-faint);
+}
+
+.v-backlog-group-check {
+  flex-shrink: 0;
+}
+
+.v-backlog-group-add {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-2) var(--sp-1) calc(var(--v-backlog-lead) - var(--sp-3));
+  border-top: 1px solid var(--border);
+}
+
+.v-backlog-group-add > .en-quickadd {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* "Mostrar mais": fim da página desenhada (backlog muito grande) */
+.v-backlog-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1) var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px dashed var(--border);
+  border-radius: var(--r-md);
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+.v-backlog-more-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.v-backlog-more-action {
+  color: var(--accent-text);
+}
+
+/* ------------------------------------------------------------------ linhas */
+.v-backlog-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.v-backlog-item {
+  position: relative;
+  border-bottom: 1px solid var(--border);
+}
+
+.v-backlog-item:last-child {
+  border-bottom: 0;
+}
+
+.v-backlog-item > .en-row {
+  border-bottom: 0;
+}
+
+.v-backlog-item.is-selected > .en-row,
+.v-backlog-item.is-selected > .v-backlog-hint {
+  background: var(--accent-soft);
+}
+
+.v-backlog-item.is-dragging {
+  opacity: 0.45;
+}
+
+.v-backlog-item.is-drop-target.drop-before::before,
+.v-backlog-item.is-drop-target.drop-after::after {
+  content: "";
+  position: absolute;
+  left: var(--sp-2);
+  right: var(--sp-2);
+  z-index: 2;
+  height: 2px;
+  border-radius: var(--r-full);
+  background: var(--accent);
+  pointer-events: none;
+}
+
+.v-backlog-item.is-drop-target.drop-before::before {
+  top: -1px;
+}
+
+.v-backlog-item.is-drop-target.drop-after::after {
+  bottom: -1px;
+}
+
+.v-backlog-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  color: var(--text-faint);
+  cursor: grab;
+  opacity: 0.45;
+}
+
+.v-backlog-item:hover .v-backlog-grip:not(.is-disabled) {
+  opacity: 1;
+}
+
+.v-backlog-grip.is-disabled {
+  cursor: default;
+  opacity: 0.15;
+}
+
+.v-backlog-select {
+  min-height: 20px;
+}
+
+/* contexto: demanda · projeto (ou "Subtarefa de …") */
+.v-backlog-row .en-cell-custom:has(> .v-backlog-ctx) {
+  flex: 0 1 240px;
+  min-width: 60px;
+}
+
+.v-backlog-ctx {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-faint);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+}
+
+button.v-backlog-ctx {
+  cursor: pointer;
+}
+
+button.v-backlog-ctx:hover {
+  background: var(--bg-hover);
+  color: var(--text-muted);
+}
+
+.v-backlog-ctx-part {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.v-backlog-ctx-part .icon {
+  flex-shrink: 0;
+}
+
+.v-backlog-ctx-part.is-empty {
+  font-style: italic;
+}
+
+/* estimativa: campo discreto, com borda só ao passar o ponteiro ou ao editar */
+.v-backlog-row .en-estimate {
+  width: 84px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.v-backlog-row .en-estimate .input-el {
+  color: var(--text-muted);
+}
+
+.v-backlog-row:hover .en-estimate {
+  border-color: var(--border);
+}
+
+.v-backlog-row .en-estimate:focus-within {
+  border-color: var(--focus-ring);
+  background: var(--bg);
+}
+
+.v-backlog-row .en-estimate:focus-within .input-el {
+  color: var(--text);
+}
+
+.v-backlog-row .en-estimate .input-el:placeholder-shown {
+  font-size: var(--fs-xs);
+}
+
+/* tarefas da demanda (modo Demandas) */
+.v-backlog-count {
+  min-width: 68px;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+.v-backlog-count.is-empty {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+/* idade */
+.v-backlog-age {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  min-width: 58px;
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+.v-backlog-age.is-old {
+  color: var(--warning);
+  font-weight: var(--fw-medium);
+}
+
+/* atalhos da linha */
+.v-backlog-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.v-backlog-row-actions .btn,
+.v-backlog-menu-btn {
+  color: var(--text-faint);
+}
+
+.v-backlog-row-actions .btn:hover,
+.v-backlog-menu-btn:hover {
+  color: var(--text);
+}
+
+@media (hover: hover) {
+  .v-backlog-row .v-backlog-row-actions,
+  .v-backlog-row .v-backlog-menu-btn {
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease);
+  }
+
+  .v-backlog-row:hover .v-backlog-row-actions,
+  .v-backlog-row:hover .v-backlog-menu-btn,
+  .v-backlog-row:focus-within .v-backlog-row-actions,
+  .v-backlog-row:focus-within .v-backlog-menu-btn,
+  .v-backlog-item.is-selected .v-backlog-row-actions,
+  .v-backlog-item.is-selected .v-backlog-menu-btn {
+    opacity: 1;
+  }
+}
+
+/* ------------------------------------------------------------------ dica de sugestão de prioridade */
+.v-backlog-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+  padding: 2px var(--sp-3) 6px var(--v-backlog-lead);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.v-backlog-hint-icon {
+  flex-shrink: 0;
+  color: var(--accent-text);
+}
+
+.v-backlog-hint-label {
+  flex-shrink: 0;
+  color: var(--accent-text);
+  font-weight: var(--fw-medium);
+}
+
+.v-backlog-hint-change {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-faint);
+}
+
+.v-backlog-hint-why {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v-backlog-hint-actions {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+/* ------------------------------------------------------------------ estados vazios */
+.v-backlog-empty {
+  padding: var(--sp-10) var(--sp-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+}
+
+.v-backlog-empty.is-positive .empty-icon {
+  color: var(--success);
+}
+
+/* ------------------------------------------------------------------ barra de seleção */
+.v-backlog-bar-wrap {
+  position: sticky;
+  bottom: var(--sp-4);
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  margin-top: var(--sp-2);
+  pointer-events: none;
+}
+
+.v-backlog-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  max-width: 100%;
+  padding: 5px var(--sp-2) 5px 5px;
+  overflow-x: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
+  scrollbar-width: thin;
+}
+
+.v-backlog-bar-info {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.v-backlog-bar-count {
+  padding-right: var(--sp-1);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+.v-backlog-bar-count strong {
+  color: var(--text);
+  font-weight: var(--fw-semibold);
+}
+
+.v-backlog-bar-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  padding-left: var(--sp-3);
+  border-left: 1px solid var(--border);
+}
+
+/* ------------------------------------------------------------------ popover "Adicionar à semana" */
+.v-backlog-week {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+}
+
+.v-backlog-week-title {
+  font-weight: var(--fw-semibold);
+}
+
+.v-backlog-week-choice {
+  align-self: flex-start;
+}
+
+.v-backlog-week-range {
+  margin-top: calc(var(--sp-2) * -1);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.v-backlog-week-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}
+
+/* ------------------------------------------------------------------ larguras intermediárias */
+@container vbacklog (max-width: 1000px) {
+  .v-backlog-row .en-cell-custom:has(> .v-backlog-ctx) {
+    flex-basis: 160px;
+  }
+
+  .v-backlog-hint-why {
+    display: none;
+  }
+}
+
+/* área estreita (painel lateral aberto, janela média): a linha quebra em duas — título em cima, controles
+   embaixo — como as linhas padrão fazem no celular */
+@container vbacklog (max-width: 780px) {
+  .v-backlog-row.en-row {
+    align-items: flex-start;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .v-backlog-row > .en-cell {
+    min-height: 22px;
+  }
+
+  .v-backlog-row .en-row-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px var(--gap);
+    min-width: 0;
+  }
+
+  .v-backlog-row .en-row-body > .en-cell-title {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .v-backlog-row .en-row-body > .en-cell-flags {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .v-backlog-row .en-cell-custom:has(> .v-backlog-ctx) {
+    flex: 0 1 auto;
+    max-width: 240px;
+  }
+
+  .v-backlog-row .en-cell-due {
+    min-width: 0;
+  }
+
+  .v-backlog-row .v-backlog-age {
+    min-width: 0;
+  }
+
+  /* os atalhos da linha continuam no menu "…" (evita uma terceira linha só para eles) */
+  .v-backlog-row .v-backlog-row-actions {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------ celular */
+@media (max-width: 640px) {
+  .v-backlog {
+    padding: var(--sp-3) var(--sp-4) var(--sp-6);
+  }
+
+  .v-backlog-inner {
+    gap: var(--sp-3);
+  }
+
+  .v-backlog-lead {
+    flex-basis: 100%;
+    font-size: var(--fs-sm);
+  }
+
+  .v-backlog-mode {
+    width: 100%;
+  }
+
+  .v-backlog-mode .segmented-item {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+
+  .v-backlog-add {
+    flex-wrap: wrap;
+  }
+
+  .v-backlog-add-field {
+    flex-basis: 100%;
+  }
+
+  .v-backlog-add-demand {
+    max-width: 100%;
+    margin: 0 0 2px var(--sp-2);
+  }
+
+  .v-backlog-group-head {
+    padding-left: var(--sp-2);
+  }
+
+  .v-backlog-group-sub,
+  .v-backlog-group-open,
+  .v-backlog-group-est {
+    display: none;
+  }
+
+  .v-backlog-row-actions {
+    display: none;
+  }
+
+  .v-backlog-row .en-cell-custom:has(> .v-backlog-ctx) {
+    flex: 1 1 100%;
+    order: 1;
+  }
+
+  .v-backlog-row .en-estimate {
+    width: 72px;
+    border-color: var(--border);
+  }
+
+  .v-backlog-hint {
+    flex-wrap: wrap;
+    padding-left: var(--sp-3);
+  }
+
+  .v-backlog-hint-why {
+    display: block;
+    flex-basis: 100%;
+    order: 5;
+    white-space: normal;
+  }
+
+  .v-backlog-bar-wrap {
+    bottom: var(--sp-2);
+  }
+
+  /* celular: contagem em cima, ações embaixo (todas à vista, sem rolar) */
+  .v-backlog-bar {
+    flex-wrap: wrap;
+    gap: 4px;
+    width: 100%;
+    padding: 4px 6px 6px;
+    overflow: visible;
+  }
+
+  .v-backlog-bar-info {
+    flex: 1 1 100%;
+  }
+
+  .v-backlog-bar-actions {
+    flex: 1 1 100%;
+    justify-content: space-between;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .v-backlog-bar-actions .btn:not(.btn-primary) .btn-label {
+    display: none;
+  }
+
+  .v-backlog-bar-actions .btn-primary {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}

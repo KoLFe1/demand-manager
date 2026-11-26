@@ -1,0 +1,920 @@
+/* Demand Manager — estilos da visualização "Demandas" (css/views/demandas.css).
+ *
+ *   .v-demandas         raiz da tela; contêiner de consulta "vdm" (as colunas dependem do espaço da TELA,
+ *                       não da janela — o painel lateral aberto estreita a lista)
+ *   .v-dm-toolbar       modo (Demandas / Tarefas), resumo de prazos, agrupamento e ordenação (estreito)
+ *   .v-dm-table         tabela: .v-dm-head (cabeçalhos ordenáveis) + .v-dm-body (linhas, grupos, expansões)
+ *   .v-dm-row           linha em grade; .v-dm-meta é "display: contents" no largo e vira a 2ª linha do
+ *                       cartão no estreito
+ * Só variáveis de css/tokens.css (nenhuma cor literal).
+ */
+
+.v-demandas {
+  container: vdm / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+  padding: var(--sp-5) var(--sp-6) var(--sp-10);
+}
+
+/* ------------------------------------------------------------------ barra superior */
+.v-dm-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+  min-width: 0;
+}
+
+.v-dm-spacer {
+  flex: 1 1 auto;
+}
+
+.v-dm-counters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.v-dm-counters:empty {
+  display: none;
+}
+
+.v-dm-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.v-dm-counter:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.v-dm-counter-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-full);
+  background: var(--text-faint);
+}
+
+.v-dm-counter.is-danger .v-dm-counter-dot {
+  background: var(--danger);
+}
+
+.v-dm-counter .tabular {
+  color: var(--text);
+  font-weight: var(--fw-semibold);
+}
+
+.v-dm-counter.is-active {
+  border-color: transparent;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.v-dm-counter.is-danger.is-active {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.v-dm-counter.is-active .tabular {
+  color: inherit;
+}
+
+.v-dm-subtasks-switch {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+/* "Ordenar e agrupar" só existe no modo estreito (no largo os cabeçalhos ordenam) */
+.v-dm-sort-btn {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ tabela */
+.v-dm-table {
+  --v-dm-lead: 28px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+  overflow: clip;
+}
+
+/* colunas: largo (≥ 1260 px de tela) — as faixas abaixo tiram colunas da direita para a esquerda */
+.v-dm-dgrid {
+  grid-template-columns:
+    var(--v-dm-lead)
+    minmax(220px, 2fr)
+    minmax(96px, 136px)
+    80px
+    128px
+    88px
+    104px
+    minmax(150px, 1fr)
+    minmax(96px, 136px)
+    28px;
+}
+
+.v-dm-tgrid {
+  grid-template-columns:
+    var(--v-dm-lead)
+    minmax(240px, 2fr)
+    minmax(150px, 1fr)
+    80px
+    128px
+    88px
+    120px
+    minmax(96px, 136px)
+    28px;
+}
+
+.v-dm-head,
+.v-dm-row {
+  display: grid;
+  align-items: center;
+  column-gap: 10px;
+  min-width: 0;
+  padding: 0 var(--sp-2) 0 var(--sp-3);
+}
+
+.v-dm-meta {
+  display: contents;
+}
+
+.v-dm-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  min-height: 34px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+}
+
+.v-dm-th {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.v-dm-th-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v-dm-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  height: 24px;
+  margin-left: -6px;
+  padding: 0 6px;
+  border-radius: var(--r-sm);
+  color: inherit;
+  font: inherit;
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.v-dm-sort:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.v-dm-sort-dir {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.v-dm-sort:hover .v-dm-sort-dir,
+.v-dm-sort:focus-visible .v-dm-sort-dir {
+  opacity: 0.45;
+}
+
+.v-dm-sort.is-active {
+  color: var(--text);
+}
+
+.v-dm-sort.is-active .v-dm-sort-dir {
+  opacity: 1;
+  color: var(--accent-text);
+}
+
+/* ------------------------------------------------------------------ linhas */
+.v-dm-item,
+.v-dm-trow {
+  border-bottom: 1px solid var(--border);
+}
+
+.v-dm-body > :last-child,
+.v-dm-group:last-child > :last-child {
+  border-bottom: 0;
+}
+
+.v-dm-row {
+  position: relative;
+  min-height: 40px;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease);
+}
+
+.v-dm-row:hover {
+  background: var(--bg-subtle);
+}
+
+.v-dm-row:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.v-dm-row.is-archived {
+  opacity: 0.7;
+}
+
+.v-dm-row.is-blocked {
+  box-shadow: inset 2px 0 0 var(--danger);
+}
+
+.v-dm-row.is-editing {
+  background: var(--bg-subtle);
+}
+
+/* item aberto no painel lateral */
+.v-dm-row.is-selected,
+.v-dm-row.is-selected:hover {
+  background: var(--bg-active);
+}
+
+.v-dm-c {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.v-dm-c-menu {
+  justify-content: flex-end;
+}
+
+/* alça de arrasto: na margem esquerda, só com o ponteiro sobre a linha */
+.v-dm-grip {
+  position: absolute;
+  top: 50%;
+  left: -1px;
+  display: inline-flex;
+  color: var(--text-faint);
+  cursor: grab;
+  opacity: 0;
+  transform: translateY(-50%);
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.v-dm-row:hover .v-dm-grip {
+  opacity: 0.8;
+}
+
+.v-dm-row.is-dragging {
+  opacity: 0.5;
+}
+
+/* botão de expandir */
+.v-dm-expand .icon {
+  transition: transform var(--dur) var(--ease);
+}
+
+.v-dm-expand.is-open .icon {
+  transform: rotate(90deg);
+}
+
+.v-dm-expand.is-empty:not(.is-open) {
+  color: var(--text-faint);
+  opacity: 0.6;
+}
+
+/* nome */
+.v-dm-c-name {
+  gap: 6px;
+}
+
+/* o nome só encolhe depois que os indicadores (flags) já cederam todo o espaço */
+.v-dm-name {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.v-dm-drow .v-dm-name,
+.v-dm-trow.is-subtask .v-dm-name {
+  flex-shrink: 1;
+}
+
+.v-dm-name .en-title {
+  font-weight: var(--fw-medium);
+}
+
+.v-dm-trow .v-dm-name .en-title {
+  font-weight: var(--fw-normal);
+}
+
+.v-dm-count {
+  flex-shrink: 0;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: var(--r-full);
+  background: var(--bg-inset);
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  line-height: 16px;
+  text-align: center;
+}
+
+.v-dm-name-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 26px;
+  margin: 0 -5px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: var(--fw-medium);
+  outline: 2px solid var(--focus-ring);
+}
+
+.v-dm-parent {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 40%;
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+
+.v-dm-parent-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v-dm-flags {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.v-dm-flags .en-flag {
+  flex-shrink: 1;
+  min-width: 22px;
+}
+
+/* células de metadados: os selos clicáveis do kit usam margem negativa (área de toque maior); sem
+   compensar, a célula mede o selo 10–12 px mais estreito e o texto vira reticências à toa */
+.v-dm-c > button.status,
+.v-dm-c > button.priority,
+.v-dm-c > button.deadline,
+.v-dm-c > button.owner {
+  max-width: calc(100% + 10px);
+}
+
+.v-dm-c > .en-picker {
+  max-width: calc(100% + 12px);
+}
+
+/* mesma compensação nas linhas padrão (taskRow) da demanda expandida: sem ela o ícone da prioridade
+   compacta encolhe para ~4 px (o botão fica limitado à largura da célula, que já desconta a margem) */
+.v-dm-expansion .en-cell > button.status,
+.v-dm-expansion .en-cell > button.priority,
+.v-dm-expansion .en-cell > button.deadline,
+.v-dm-expansion .en-cell > button.owner {
+  max-width: calc(100% + 10px);
+}
+
+.v-dm-c-next {
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.v-dm-next-icon {
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+
+.v-dm-next {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.v-dm-next .inline-edit-view.is-placeholder {
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.v-dm-row:hover .v-dm-next .inline-edit-view.is-placeholder,
+.v-dm-next .inline-edit-view.is-placeholder:focus-visible {
+  opacity: 1;
+}
+
+.v-dm-c-next:has(.inline-edit-view.is-placeholder) .v-dm-next-icon {
+  opacity: 0;
+}
+
+.v-dm-row:hover .v-dm-c-next:has(.inline-edit-view.is-placeholder) .v-dm-next-icon {
+  opacity: 0.6;
+}
+
+.v-dm-c-owner .owner {
+  max-width: 100%;
+}
+
+.v-dm-c-owner .owner.is-empty {
+  opacity: 0;
+}
+
+.v-dm-row:hover .v-dm-c-owner .owner.is-empty,
+.v-dm-c-owner .owner.is-empty:focus-visible {
+  opacity: 1;
+}
+
+.v-dm-menu-btn {
+  color: var(--text-faint);
+}
+
+@media (hover: hover) {
+  .v-dm-row .v-dm-menu-btn,
+  .v-dm-row .en-due.is-empty {
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease);
+  }
+
+  .v-dm-row:hover .v-dm-menu-btn,
+  .v-dm-row:focus-within .v-dm-menu-btn,
+  .v-dm-row:hover .en-due.is-empty,
+  .v-dm-row:focus-within .en-due.is-empty {
+    opacity: 1;
+  }
+}
+
+/* demanda / projeto (modo Tarefas) */
+.v-dm-context {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  width: 100%;
+  min-width: 0;
+}
+
+.v-dm-context .en-demand {
+  height: 20px;
+  max-width: calc(100% + 12px);
+  font-size: var(--fs-sm);
+}
+
+.v-dm-context .en-demand > .icon {
+  display: none;
+}
+
+.v-dm-context .en-demand .en-code {
+  font-size: var(--fs-xs);
+}
+
+.v-dm-context-project {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  min-width: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  line-height: 1.3;
+}
+
+.v-dm-context-project .en-dot {
+  width: 6px;
+  height: 6px;
+}
+
+/* estimativa × gasto */
+.v-dm-time {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  width: 100%;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.v-dm-time.is-empty {
+  color: var(--text-faint);
+}
+
+.v-dm-time-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v-dm-time-spent {
+  color: var(--text);
+}
+
+.v-dm-time-est {
+  color: var(--text-faint);
+}
+
+.v-dm-time-bar {
+  display: block;
+  width: 72px;
+  max-width: 100%;
+  height: 3px;
+  border-radius: var(--r-full);
+  background: var(--bg-inset);
+  overflow: hidden;
+}
+
+.v-dm-time-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.v-dm-time.is-on .v-dm-time-fill {
+  background: var(--success);
+}
+
+.v-dm-time.is-over .v-dm-time-spent {
+  color: var(--warning);
+  font-weight: var(--fw-medium);
+}
+
+.v-dm-time.is-over .v-dm-time-fill {
+  background: var(--warning);
+}
+
+/* ------------------------------------------------------------------ tarefas dentro da demanda */
+.v-dm-expansion {
+  position: relative;
+  padding: 2px var(--sp-2) var(--sp-2) calc(var(--sp-3) + var(--v-dm-lead) + var(--sp-2));
+  border-top: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+
+.v-dm-expansion::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: var(--sp-2);
+  left: calc(var(--sp-3) + var(--v-dm-lead) / 2);
+  width: 1px;
+  background: var(--border-strong);
+}
+
+.v-dm-expansion .en-row {
+  min-height: 34px;
+  padding-left: var(--sp-2);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.v-dm-expansion .en-row:hover {
+  background: var(--bg-hover);
+}
+
+.v-dm-expansion .en-row.is-indented {
+  padding-left: calc(var(--sp-2) + var(--en-indent, 1) * 24px);
+}
+
+.v-dm-expansion .en-cell-grip {
+  margin-right: -4px;
+}
+
+.v-dm-subtasks > .en-row:last-child {
+  border-bottom: 1px solid var(--border);
+}
+
+.v-dm-quickadd-task {
+  min-height: 32px;
+  margin-top: 2px;
+  padding-left: var(--sp-2);
+}
+
+/* ------------------------------------------------------------------ grupos */
+.v-dm-group + .v-dm-group > .v-dm-group-head {
+  border-top: 1px solid var(--border);
+}
+
+.v-dm-group-head {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+
+.v-dm-group-head.is-collapsed {
+  border-bottom: 0;
+}
+
+.v-dm-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  height: 28px;
+  margin-left: -6px;
+  padding: 0 8px 0 6px;
+  border-radius: var(--r-md);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  transition: background-color var(--dur-fast) var(--ease);
+}
+
+.v-dm-group-toggle:hover {
+  background: var(--bg-hover);
+}
+
+.v-dm-group-chevron {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  transition: transform var(--dur) var(--ease);
+}
+
+.v-dm-group-head.is-collapsed .v-dm-group-chevron {
+  transform: rotate(-90deg);
+}
+
+.v-dm-group-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v-dm-group-code,
+.v-dm-group-hint {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+}
+
+.v-dm-group-icon {
+  color: var(--text-faint);
+}
+
+.v-dm-group-count {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  font-weight: var(--fw-normal);
+}
+
+/* ------------------------------------------------------------------ criação rápida e vazio */
+.v-dm-add {
+  margin-top: var(--sp-1);
+}
+
+/* "Mostrar mais" no fim da tabela de tarefas paginada */
+.v-dm-more {
+  display: flex;
+  justify-content: center;
+  padding: var(--sp-2);
+  border-top: 1px solid var(--border);
+}
+
+.v-dm-quickadd {
+  border: 1px dashed transparent;
+}
+
+.v-dm-quickadd:hover {
+  border-color: var(--border);
+}
+
+.v-dm-content > .v-dm-empty {
+  border: 1px dashed var(--border);
+  border-radius: var(--r-lg);
+}
+
+/* ------------------------------------------------------------------ faixas de largura (da TELA) */
+
+/* sem a coluna Responsável */
+@container vdm (max-width: 1259px) {
+  .v-dm-dgrid {
+    grid-template-columns: var(--v-dm-lead) minmax(200px, 2fr) minmax(96px, 128px) 80px 128px 88px 104px minmax(140px, 1fr) 28px;
+  }
+
+  .v-dm-tgrid {
+    grid-template-columns: var(--v-dm-lead) minmax(220px, 2fr) minmax(140px, 1fr) 80px 124px 88px 112px minmax(96px, 120px) 28px;
+  }
+
+  .v-dm-dgrid .v-dm-c-owner {
+    display: none;
+  }
+}
+
+/* tarefas: o Responsável sai só abaixo de 1100 px */
+@container vdm (max-width: 1099px) {
+  .v-dm-tgrid {
+    grid-template-columns: var(--v-dm-lead) minmax(200px, 2fr) minmax(130px, 1fr) 80px 124px 88px 112px 28px;
+  }
+
+  .v-dm-tgrid .v-dm-c-owner {
+    display: none;
+  }
+}
+
+/* sem Projeto (demandas) e sem Estimativa × gasto (tarefas) */
+@container vdm (max-width: 979px) {
+  .v-dm-dgrid {
+    grid-template-columns: var(--v-dm-lead) minmax(170px, 1.6fr) 80px 124px 88px 96px minmax(110px, 1fr) 28px;
+  }
+
+  .v-dm-tgrid {
+    grid-template-columns: var(--v-dm-lead) minmax(170px, 1.8fr) minmax(110px, 1fr) 80px 124px 88px 28px;
+  }
+
+  .v-dm-dgrid .v-dm-c-project,
+  .v-dm-tgrid .v-dm-c-time {
+    display: none;
+  }
+}
+
+/* estreito: cada linha vira um cartão de duas linhas; cabeçalhos dão lugar ao menu "Ordenar e agrupar" */
+@container vdm (max-width: 759px) {
+  .v-dm-head,
+  .v-dm-group-btn {
+    display: none;
+  }
+
+  .v-dm-sort-btn {
+    display: inline-flex;
+  }
+
+  .v-dm-row {
+    grid-template-columns: var(--v-dm-lead) minmax(0, 1fr) auto;
+    grid-template-areas:
+      "lead name menu"
+      ". meta meta";
+    align-items: start;
+    row-gap: 6px;
+    column-gap: var(--sp-2);
+    padding: 9px var(--sp-2) 10px var(--sp-2);
+  }
+
+  .v-dm-c-expand,
+  .v-dm-c-check {
+    grid-area: lead;
+    justify-content: center;
+    min-height: 24px;
+  }
+
+  .v-dm-c-name {
+    grid-area: name;
+    flex-wrap: wrap;
+    align-items: center;
+    min-height: 24px;
+    row-gap: 2px;
+  }
+
+  .v-dm-c-menu {
+    grid-area: menu;
+    min-height: 24px;
+  }
+
+  .v-dm-meta {
+    grid-area: meta;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    min-width: 0;
+  }
+
+  /* os chips quebram para a linha seguinte em vez de encolher até virar reticências */
+  .v-dm-meta > .v-dm-c {
+    display: flex;
+    flex: 0 0 auto;
+    max-width: 100%;
+  }
+
+  .v-dm-count {
+    display: none;
+  }
+
+  .v-dm-c-status { order: 1; }
+  .v-dm-c-priority { order: 2; }
+  .v-dm-c-due { order: 3; }
+  .v-dm-c-progress { order: 4; }
+  .v-dm-c-time { order: 4; }
+  .v-dm-c-project,
+  .v-dm-c-context { order: 5; }
+
+  .v-dm-dgrid .v-dm-meta > .v-dm-c-project,
+  .v-dm-tgrid .v-dm-meta > .v-dm-c-time {
+    display: flex;
+  }
+
+  .v-dm-meta > .v-dm-c-owner {
+    display: none;
+  }
+
+  .v-dm-meta > .v-dm-c-time .v-dm-time.is-empty {
+    display: none;
+  }
+
+  .v-dm-time-bar {
+    display: none;
+  }
+
+  .v-dm-c-next {
+    order: 6;
+    flex: 1 1 100%;
+  }
+
+  .v-dm-c-next:has(.inline-edit-view.is-placeholder) {
+    display: none;
+  }
+
+  .v-dm-context-project {
+    display: none;
+  }
+
+  .v-dm-name .en-name {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .v-dm-parent {
+    max-width: 100%;
+  }
+
+  .v-dm-flags {
+    flex: 1 1 100%;
+  }
+
+  .v-dm-flags:empty {
+    display: none;
+  }
+
+  .v-dm-grip {
+    display: none;
+  }
+
+  .v-dm-expansion {
+    padding-left: var(--sp-2);
+  }
+
+  .v-dm-expansion::before {
+    display: none;
+  }
+
+  /* toque: menu e controles vazios sempre visíveis */
+  .v-dm-row .v-dm-menu-btn {
+    opacity: 1;
+  }
+}
+
+/* janela de celular: margens menores */
+@media (max-width: 767px) {
+  .v-demandas {
+    gap: var(--sp-2);
+    padding: var(--sp-3) var(--sp-4) var(--sp-8);
+  }
+
+  .v-dm-row {
+    min-height: 48px;
+  }
+}

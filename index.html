@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17171a" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Demand Manager — demandas, tarefas, prazos e tempo, com uso offline e sincronização entre dispositivos.">
+<meta name="application-name" content="Demand Manager">
+<meta name="apple-mobile-web-app-title" content="Demandas">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<title>Demand Manager</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/icon-maskable.svg">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/kit.css">
+<link rel="stylesheet" href="css/shell.css">
+<link rel="stylesheet" href="css/shared.css">
+<link rel="stylesheet" href="css/panels.css">
+<link rel="stylesheet" href="css/views/dashboard.css">
+<link rel="stylesheet" href="css/views/semana.css">
+<link rel="stylesheet" href="css/views/demandas.css">
+<link rel="stylesheet" href="css/views/kanban.css">
+<link rel="stylesheet" href="css/views/calendario.css">
+<link rel="stylesheet" href="css/views/hierarquia.css">
+<link rel="stylesheet" href="css/views/backlog.css">
+<link rel="stylesheet" href="css/views/dependencias.css">
+<link rel="stylesheet" href="css/views/tempo.css">
+<link rel="stylesheet" href="css/views/metricas.css">
+<link rel="stylesheet" href="css/views/config.css">
+<script>
+  // Aplica o tema salvo antes da primeira pintura (sem piscar). A chave é a mesma de app.prefs ('theme'),
+  // com o prefixo do banco isolado quando a URL traz ?db=NOME.
+  (function () {
+    try {
+      var ns = (new URLSearchParams(location.search).get('db') || '').trim().replace(/[^A-Za-z0-9._-]/g, '').slice(0, 80);
+      var raw = localStorage.getItem((ns ? ns + ':' : '') + 'dm.pref.theme');
+      var theme = raw ? JSON.parse(raw) : null;
+      if (theme === 'light' || theme === 'dark') document.documentElement.setAttribute('data-theme', theme);
+    } catch (e) { /* sem armazenamento: segue a preferência do sistema */ }
+  })();
+</script>
+</head>
+<body>
+<div id="app">
+  <div class="boot-splash" role="status" aria-live="polite">
+    <img class="boot-splash-icon" src="assets/icon.svg" width="44" height="44" alt="">
+    <span class="boot-splash-text">Abrindo o Demand Manager…</span>
+  </div>
+</div>
+<noscript>
+  <p class="boot-noscript">O Demand Manager precisa de JavaScript para funcionar. Ative o JavaScript no navegador e recarregue a página.</p>
+</noscript>
+<script src="config.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

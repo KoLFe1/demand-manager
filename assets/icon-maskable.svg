@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Demand Manager">
+  <rect width="512" height="512" fill="#4f5bd5"/>
+  <g transform="translate(256 256) scale(0.72) translate(-256 -256)" fill="none" stroke="#ffffff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M132 176l34 34 62-68"/>
+    <path d="M276 172h104" opacity="0.92"/>
+    <path d="M132 290l34 34 62-68" opacity="0.72"/>
+    <path d="M276 286h104" opacity="0.66"/>
+    <path d="M148 392h232" opacity="0.4"/>
+  </g>
+</svg>
