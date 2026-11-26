@@ -913,6 +913,8 @@ export default {
   icon: 'settings',
   order: 110,
   section: 'system',
+  /** Mostra o estado da sincronização: a casca redesenha esta tela a cada aviso do app.sync. */
+  sync: true,
   /**
    * Desenha a tela de Configurações.
    * @param {object} app

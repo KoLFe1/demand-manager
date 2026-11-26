@@ -11,10 +11,14 @@
 //   // extras: shortcuts, showHelp(), openPalette(query), showDigest(), checkDailyDigest(), createProject(), openSync(anchor), destroy()
 // }
 //
-// Renderização: um único mount() (core/dom.js) desenha casca + tela + painel; mudanças no banco, na
-// sincronização, na rota, no estado das telas e no escopo pedem UM novo desenho no próximo quadro (e há um
-// redesenho por minuto para "hoje" e os prazos virarem sozinhos). Erro numa tela vira um cartão de erro no
-// lugar dela — a casca continua usável.
+// Renderização: três mount() (core/dom.js) — casca, tela e painel. A casca deixa os hospedeiros da tela
+// (<main>) e do painel com data-morph="skip"; cada região tem seu próprio desenho e o agendador da casca junta
+// os pedidos por quadro marcando só as regiões afetadas: trocar de aba no painel desenha só o painel; abrir/
+// fechar o painel desenha casca + painel (e a tela apenas se ela leu app.ui.panel() no último desenho, p. ex.
+// para destacar a linha). Banco, rota e estado das telas desenham tudo; sincronização desenha a casca (e a
+// tela que declara `sync: true`). O tique de 1 min desenha a casca e, se um cronômetro roda ou o dia virou,
+// também tela e painel. Contadores em app.ui.__renders. Erro numa tela vira um cartão de erro no lugar
+// dela — a casca continua usável.
 
 import { formatDateTime, formatRelativeTime } from '../core/dates.js';
 import { cx, h, mount } from '../core/dom.js';
@@ -361,7 +365,7 @@ export function startShell(app, root) {
     const next = Object.freeze({ ...prev, ...change });
     viewStates.set(id, next);
     prefs.set(`view.${id}`, next);
-    schedule();
+    schedule({ shell: true, view: true });
   }
 
   function viewCtx(view) {
@@ -840,7 +844,7 @@ export function startShell(app, root) {
         const change = typeof patch === 'function' ? patch(panelState.state) : patch;
         if (!change || typeof change !== 'object' || panelState.key !== key) return;
         panelState = { key, state: { ...panelState.state, ...change } };
-        schedule();
+        schedule({ panel: true });
       },
       close: () => ui.closePanel(),
     };
@@ -934,25 +938,119 @@ export function startShell(app, root) {
         'div',
         { class: 'shell-main' },
         renderTopbar(view),
-        h('main', { class: 'shell-content', id: 'shell-content', tabindex: -1, 'aria-label': view.title }, h('div', { class: cx('shell-view', `shell-view-${view.id}`), key: `view:${view.id}`, 'data-view': view.id }, renderViewBody(view))),
+        // Hospedeiro da tela: o morph da casca não entra nos filhos (são do mount da tela).
+        h('main', { class: 'shell-content', id: 'shell-content', tabindex: -1, 'aria-label': view.title, 'data-morph': 'skip', ref: (el) => { viewHost = el; } }),
       ),
-      hasPanel ? renderPanel() : null,
+      // Hospedeiro do painel (display: contents): o <aside> é desenhado pelo mount do painel.
+      h('div', { class: 'shell-panel-host', key: 'panel-host', 'data-morph': 'skip', ref: (el) => { panelHost = el; } }),
       mobile ? renderTabbar(view) : null,
     );
   }
 
-  const view = mount(root, render);
-  let frame = 0;
+  /** Região da tela (mount próprio dentro de <main>). */
+  function renderViewRegion() {
+    const view = activeView();
+    return h('div', { class: cx('shell-view', `shell-view-${view.id}`), key: `view:${view.id}`, 'data-view': view.id }, renderViewBody(view));
+  }
 
-  function schedule() {
-    view.schedule();
-    if (frame === 0) {
-      // Depois do desenho: rolagem para o topo ao trocar de tela e atualização do popover de sincronização.
-      frame = win.requestAnimationFrame(() => {
-        frame = 0;
-        afterRender();
-      });
+  /** Região do painel (mount próprio dentro de .shell-panel-host). */
+  function renderPanelRegion() {
+    const panel = currentPanel();
+    return panel && PANEL_TYPES.has(panel.type) ? renderPanel() : null;
+  }
+
+  // ----- agendador por região ---------------------------------------------------------------------
+  const shellMount = mount(root, render);
+  let viewHost = null;
+  let panelHost = null;
+  let viewMount = null;
+  let viewMountHost = null;
+  let panelMount = null;
+  let panelMountHost = null;
+  let viewRendering = false;
+  let viewReadPanel = false;
+  let destroyed = false;
+  const renders = { shell: 0, view: 0, panel: 0 };
+  const dirty = { shell: false, view: false, panel: false };
+  const ALL = { shell: true, view: true, panel: true };
+  let frame = 0;
+  let fallback = 0;
+  let flushing = false;
+
+  /**
+   * Pede um novo desenho no próximo quadro (vários pedidos = um desenho). Sem argumento: tudo.
+   * @param {{ shell?: boolean, view?: boolean, panel?: boolean }} [parts]
+   */
+  function schedule(parts = ALL) {
+    if (destroyed) return;
+    if (parts.shell) dirty.shell = true;
+    if (parts.view) dirty.view = true;
+    if (parts.panel) dirty.panel = true;
+    if (flushing || frame !== 0) return; // durante o desenho: o fim do flush agenda outro quadro
+    frame = win.requestAnimationFrame(flush);
+    fallback = win.setTimeout(flush, 100); // quadros suspensos (aba oculta)
+  }
+
+  /** Mudança só no painel (abrir/fechar/trocar): a tela redesenha apenas se leu o painel. */
+  function schedulePanelChange() {
+    schedule({ shell: true, panel: true, view: viewReadPanel });
+  }
+
+  function flush() {
+    if (frame !== 0) win.cancelAnimationFrame(frame);
+    if (fallback !== 0) win.clearTimeout(fallback);
+    frame = 0;
+    fallback = 0;
+    if (destroyed) return;
+    const todo = { ...dirty };
+    dirty.shell = dirty.view = dirty.panel = false;
+    flushing = true;
+    try {
+      if (todo.shell) {
+        renders.shell += 1;
+        shellMount.update();
+      }
+      if (viewHost !== viewMountHost) {
+        if (viewMount) viewMount.destroy();
+        viewMount = viewHost ? mount(viewHost, renderViewRegion) : null;
+        viewMountHost = viewHost;
+        todo.view = true;
+      }
+      if (panelHost !== panelMountHost) {
+        if (panelMount) panelMount.destroy();
+        panelMount = panelHost ? mount(panelHost, renderPanelRegion) : null;
+        panelMountHost = panelHost;
+        todo.panel = true;
+      }
+      if (todo.view && viewMount) {
+        renders.view += 1;
+        viewRendering = true;
+        viewReadPanel = false;
+        try {
+          viewMount.update();
+        } finally {
+          viewRendering = false;
+        }
+      }
+      if (todo.panel && panelMount) {
+        renders.panel += 1;
+        panelMount.update();
+      }
+    } finally {
+      flushing = false;
     }
+    if (dirty.shell || dirty.view || dirty.panel) schedule({});
+    afterRender();
+  }
+
+  function hasRunningTimer() {
+    const list = safeCall(() => app.sel.activeTimers(), []) || [];
+    return list.some((entry) => entry && timerState(entry) === TIMER.RUNNING);
+  }
+
+  function dayKey() {
+    const d = app.clock.now();
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
   }
 
   function afterRender() {
@@ -1030,7 +1128,7 @@ export function startShell(app, root) {
       const replace = typeof options.replace === 'boolean' ? options.replace : !!before;
       const changed = router.setParams({ panel: key }, { replace });
       if (!changed && Object.keys(initial).length) {
-        schedule();
+        schedule({ panel: true });
         closeDrawer();
         return true;
       }
@@ -1060,6 +1158,7 @@ export function startShell(app, root) {
 
     /** @returns {{ type: 'task'|'demand', id: string }|null} painel aberto */
     panel() {
+      if (viewRendering) viewReadPanel = true; // a tela depende do painel: redesenha quando ele muda
       const p = currentPanel();
       return p ? { type: p.type, id: p.id } : null;
     },
@@ -1087,6 +1186,9 @@ export function startShell(app, root) {
       if (typeof viewId !== 'string' || !viewId) return;
       setViewState(viewId, patch);
     },
+
+    /** Contadores de desenho por região (testes/diagnóstico). */
+    __renders: renders,
 
     /** Pede um novo desenho (no próximo quadro). */
     rerender() {
@@ -1171,7 +1273,12 @@ export function startShell(app, root) {
     /** Desmonta a casca (testes). */
     destroy() {
       for (const fn of cleanups.splice(0)) safeCall(fn);
-      view.destroy();
+      destroyed = true;
+      if (frame !== 0) win.cancelAnimationFrame(frame);
+      if (fallback !== 0) win.clearTimeout(fallback);
+      if (viewMount) viewMount.destroy();
+      if (panelMount) panelMount.destroy();
+      shellMount.destroy();
     },
   };
   ui.scope = Object.freeze({ projectId: validScopeId(scope0) });
@@ -1271,7 +1378,7 @@ export function startShell(app, root) {
 
   // ----- assinaturas ---------------------------------------------------------------------------------
   cleanups.push(app.store.subscribe(() => schedule()));
-  if (app.sync && typeof app.sync.subscribe === 'function') cleanups.push(app.sync.subscribe(() => schedule()));
+  if (app.sync && typeof app.sync.subscribe === 'function') cleanups.push(app.sync.subscribe(() => schedule({ shell: true, view: activeView().sync === true })));
   if (app.remote && app.remote.auth && typeof app.remote.auth.onChange === 'function') {
     const bootUser = (safeSession(app) || { user: { id: null } }).user.id;
     const reload = () => (app.env && app.env.reload ? app.env.reload() : win.location.reload());
@@ -1355,8 +1462,13 @@ export function startShell(app, root) {
     if (app.store.versionChanged) showVersionChange({ newVersion: -1 });
   }
 
+  let lastDay = dayKey();
   const minuteTimer = win.setInterval(() => {
-    schedule();
+    // A tela e o painel só redesenham se o tempo os afeta: cronômetro rodando ou virada do dia.
+    const day = dayKey();
+    const timeMatters = hasRunningTimer() || day !== lastDay;
+    lastDay = day;
+    schedule({ shell: true, view: timeMatters, panel: timeMatters });
     checkDailyDigest(app); // app aberto de um dia para o outro
   }, 60000);
   // "Resumo do dia": logo depois do primeiro desenho e quando o app volta a ficar visível (celular).
@@ -1383,7 +1495,8 @@ export function startShell(app, root) {
       drawerOpen = false;
       enterView(nextView, prevView);
     }
-    schedule();
+    if (prev && prevView === nextView && onlyPanelChanged(prev.params, next.params)) schedulePanelChange();
+    else schedule();
   });
   router.start();
   if (!viewByPath(router.current().path)) router.navigate(DEFAULT_PATH, { params: router.current().params, replace: true });
@@ -1391,10 +1504,25 @@ export function startShell(app, root) {
   // ----- primeiro desenho -----------------------------------------------------------------------------
   applyTheme();
   root.replaceChildren();
-  view.update();
+  schedule();
+  flush();
   lastPath = router.current().path;
   enterView(activeView(), null);
   return ui;
+}
+
+/** Entre duas rotas da mesma tela, só o parâmetro `panel` mudou? */
+function onlyPanelChanged(a, b) {
+  const pa = a || {};
+  const pb = b || {};
+  const keys = new Set([...Object.keys(pa), ...Object.keys(pb)]);
+  let panel = false;
+  for (const k of keys) {
+    if (pa[k] === pb[k]) continue;
+    if (k !== 'panel') return false;
+    panel = true;
+  }
+  return panel;
 }
 
 function navigatorIsMac() {

@@ -761,6 +761,11 @@ body {
 }
 
 /* ------------------------------------------------------------------ painel lateral */
+/* hospedeiro do mount do painel: não gera caixa (o <aside> continua item da grade da casca) */
+.shell-panel-host {
+  display: contents;
+}
+
 .shell-panel {
   grid-area: panel;
   display: flex;
