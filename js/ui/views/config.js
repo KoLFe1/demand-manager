@@ -549,7 +549,7 @@ function renderPreferences(app) {
     settingRow(
       'Responsável padrão',
       'Preenchido nas demandas e tarefas novas.',
-      textInput({ value: s('owner.default') || '', placeholder: 'Ex.: Pedro', size: 'sm', attrs: { 'data-field': 'owner-default' }, onchange: (text) => setSetting(app, 'owner.default', text.trim()) }),
+      textInput({ value: s('owner.default') || '', placeholder: 'Ex.: Ana', size: 'sm', attrs: { 'data-field': 'owner-default' }, onchange: (text) => setSetting(app, 'owner.default', text.trim()) }),
       { key: 'owner' },
     ),
     settingRow(
