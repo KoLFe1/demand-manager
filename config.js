@@ -19,7 +19,7 @@
 // Antes do primeiro uso, execute o arquivo supabase/schema.sql inteiro no SQL Editor do Supabase
 // (ele pode ser executado de novo depois de atualizações, sem perder dados).
 
-// window.DM_CONFIG = {
-//   supabaseUrl: 'https://SEU-PROJETO.supabase.co',
-//   supabaseKey: 'SUA-CHAVE-PUBLICA',
-// };
+window.DM_CONFIG = {
+  supabaseUrl: 'https://cotzuocchywodlebmjen.supabase.co',
+  supabaseKey: 'sb_publishable_5JNrtc7Xyqyi3l6vDvC0Vw_jilDtns0',
+};
