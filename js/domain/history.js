@@ -509,6 +509,13 @@ function describeNote(event) {
   return entry('message', 'Observação adicionada', excerpt(metaOf(event).excerpt));
 }
 
+function describeLink(event, added) {
+  const meta = metaOf(event);
+  const label = excerpt(meta.label, 80) || null;
+  if (!added) return entry('unlink', 'Link removido', label, 'muted');
+  return entry('link', meta.restored ? 'Link restaurado' : 'Link adicionado', label);
+}
+
 function describeTime(event) {
   const source = metaOf(event).source;
   const detail = source === 'timer' ? 'Cronômetro' : source === 'manual' ? 'Lançamento manual' : null;
@@ -637,6 +644,10 @@ export function describeEvent(event, ctx = {}) {
       return describeWeek(event, c);
     case ACTIONS.FOLLOW_UP:
       return describeFollowUp(event, c);
+    case ACTIONS.LINK_ADDED:
+      return describeLink(event, true);
+    case ACTIONS.LINK_REMOVED:
+      return describeLink(event, false);
     default:
       return describeUnknown(event, c);
   }

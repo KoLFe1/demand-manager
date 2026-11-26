@@ -31,6 +31,7 @@ import { compareManualOrder } from '../domain/filters.js';
 import { ENTRY_SOURCE, TIMER, ValidationError, findOverlaps, formatDuration, manualEntryValues, pausePatch, resumePatch, startValues, stopPatch, timerState } from '../domain/timetracking.js';
 import { WEEK_KIND, allWeekItems, carryOverPlan, kindForNewItem } from '../domain/weekplan.js';
 import { MAX_TEMPLATES, TemplateError, availableTemplates, isBuiltinTemplate, normalizeTemplate, normalizeTemplateList, planTemplate } from '../domain/templates.js';
+import { classifyTarget, compareLinks } from '../domain/links.js';
 import { uuid } from '../core/ids.js';
 
 /**
@@ -40,7 +41,7 @@ import { uuid } from '../core/ids.js';
  * invalid_estimate, invalid_weight, invalid_tags, invalid_body, project_not_found, demand_not_found,
  * invalid_parent, invalid_position, demand_deleted, parent_deleted, missing | self | duplicate | hierarchy |
  * cycle (dependências), timer_running, timer_active, overlap, invalid_option, invalid_week, invalid_kind,
- * invalid_setting, invalid_suggestion — e os códigos de ValidationError de timetracking.js.
+ * invalid_setting, invalid_suggestion, invalid_target (links: data.reason = 'empty' | 'unsafe' | 'too_long') — e os códigos de ValidationError de timetracking.js.
  */
 export class CommandError extends Error {
   /**
@@ -307,6 +308,20 @@ export function createCommands(app) {
   const event = (entityType, entityId, action, fields = {}) => log(makeEvent({ entityType, entityId, action, at: now, deviceId: app.deviceId, ...fields }));
 
   // --- validação de campos -----------------------------------------------------------------------
+  /** Alvo de link validado (domain/links.js) ou CommandError 'invalid_target'. */
+  function checkedTarget(target) {
+    const res = classifyTarget(target);
+    if (!res.ok) fail('invalid_target', res.error.message, { field: 'target', reason: res.error.code });
+    return res;
+  }
+
+  /** Rótulo de link: texto aparado (até 200) ou, vazio, o sugerido pelo alvo. */
+  function linkLabel(label, res) {
+    if (label !== null && label !== undefined && typeof label !== 'string') fail('invalid_field', 'O rótulo do link precisa ser um texto.', { field: 'label' });
+    const text = typeof label === 'string' ? label.replace(/\s+/g, ' ').trim().slice(0, 200) : '';
+    return text || res.label || null;
+  }
+
   function textOrNull(field, value) {
     if (value === null || value === undefined) return null;
     if (typeof value !== 'string') fail('invalid_field', `O campo "${field}" precisa ser um texto.`, { field });
@@ -1789,6 +1804,109 @@ export function createCommands(app) {
       const note = liveGet('notes', noteId);
       if (!note) fail('not_found', 'Observação não encontrada: ela pode ter sido excluída.', { type: 'note', id: noteId });
       return store.update('notes', noteId, { deleted_at: now });
+    }),
+
+    // ----- links e arquivos -------------------------------------------------------------------------
+    /**
+     * Acrescenta um link (URL, caminho de rede/local, arquivo, e-mail…) a uma demanda, tarefa ou projeto.
+     * O tipo vem de domain/links.js; sem rótulo, usa o sugerido (nome do arquivo / host).
+     * @param {'demand'|'task'|'project'} type
+     * @param {string} id
+     * @param {{ target: string, label?: string|null }} values
+     * @returns {object} link criado
+     */
+    addLink: define('addLink', (type, id, values) => {
+      if (!NOTE_TYPES.has(type)) fail('invalid_type', `Tipo de registro desconhecido: ${String(type)}.`, { type });
+      requireRow(type, id);
+      const { target, label } = values || {};
+      const res = checkedTarget(target);
+      const name = linkLabel(label, res);
+      const siblings = store.byIndex('links', 'entity_id', id).filter((l) => l.entity_type === type);
+      const link = store.insert('links', {
+        entity_type: type,
+        entity_id: id,
+        target: res.target,
+        label: name,
+        kind: res.kind,
+        sort_order: nextSortOrder(siblings),
+        created_at: now,
+        updated_at: now,
+      });
+      event(type, id, ACTIONS.LINK_ADDED, { newValue: link.id, meta: { label: name, kind: res.kind } });
+      return link;
+    }),
+
+    /**
+     * Altera rótulo e/ou alvo de um link (rótulo vazio volta ao sugerido pelo alvo).
+     * @param {string} linkId
+     * @param {{ target?: string, label?: string|null }} patch
+     * @returns {object} link (o mesmo objeto quando nada mudou)
+     */
+    updateLink: define('updateLink', (linkId, patch) => {
+      const link = liveGet('links', linkId);
+      if (!link) fail('not_found', 'Link não encontrado: ele pode ter sido removido.', { type: 'link', id: linkId });
+      const p = patch || {};
+      const res = checkedTarget(p.target === undefined ? link.target : p.target);
+      const name = p.label === undefined && p.target === undefined ? link.label : linkLabel(p.label === undefined ? link.label : p.label, res);
+      const out = {};
+      if (res.target !== link.target) out.target = res.target;
+      if (res.kind !== link.kind) out.kind = res.kind;
+      if (name !== link.label) out.label = name;
+      return Object.keys(out).length ? store.update('links', linkId, out) : link;
+    }),
+
+    /**
+     * Remove (exclusão lógica) um link; o "Desfazer" é restoreLink.
+     * @param {string} linkId
+     * @returns {object} link removido
+     */
+    deleteLink: define('deleteLink', (linkId) => {
+      const link = liveGet('links', linkId);
+      if (!link) fail('not_found', 'Link não encontrado: ele pode ter sido removido.', { type: 'link', id: linkId });
+      const row = store.update('links', linkId, { deleted_at: now });
+      event(link.entity_type, link.entity_id, ACTIONS.LINK_REMOVED, { oldValue: link.id, meta: { label: link.label, kind: link.kind } });
+      return row;
+    }),
+
+    /**
+     * Desfaz a remoção de um link (o registro dono precisa existir).
+     * @param {string} linkId
+     * @returns {object} link
+     */
+    restoreLink: define('restoreLink', (linkId) => {
+      const link = hasId(linkId) ? store.get('links', linkId) : null;
+      if (!link) fail('not_found', 'Link não encontrado.', { type: 'link', id: linkId });
+      if (!link.deleted_at) return link;
+      requireRow(link.entity_type, link.entity_id);
+      const row = store.update('links', linkId, { deleted_at: null });
+      event(link.entity_type, link.entity_id, ACTIONS.LINK_ADDED, { newValue: link.id, meta: { label: link.label, kind: link.kind, restored: true } });
+      return row;
+    }),
+
+    /**
+     * Move um link para a posição `index` (0 = primeiro) entre os links do mesmo registro.
+     * @param {string} linkId
+     * @param {number} index
+     * @returns {object} link
+     */
+    reorderLink: define('reorderLink', (linkId, index) => {
+      const link = liveGet('links', linkId);
+      if (!link) fail('not_found', 'Link não encontrado: ele pode ter sido removido.', { type: 'link', id: linkId });
+      if (!Number.isInteger(index) || index < 0) fail('invalid_position', 'Posição inválida.', { index });
+      const others = store
+        .byIndex('links', 'entity_id', link.entity_id)
+        .filter((l) => l.entity_type === link.entity_type && l.id !== link.id)
+        .sort(compareLinks);
+      const list = [...others];
+      list.splice(Math.min(index, others.length), 0, link);
+      // Renumera em passos fixos só o que mudou (poucos links por registro).
+      let result = link;
+      list.forEach((row, i) => {
+        const order = (i + 1) * ORDER_STEP;
+        const updated = finite(row.sort_order) === order ? row : store.update('links', row.id, { sort_order: order });
+        if (row.id === link.id) result = updated;
+      });
+      return result;
     }),
 
     // ----- tempo ----------------------------------------------------------------------------------

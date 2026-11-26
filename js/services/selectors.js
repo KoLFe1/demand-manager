@@ -28,6 +28,7 @@ import { nextActions, prioritySuggestions } from '../domain/nextactions.js';
 import { demandProgress, projectProgress, taskFraction } from '../domain/progress.js';
 import { isCancelled, isClosed, isOpen, resolveStatuses, statusById } from '../domain/statuses.js';
 import { indexEvents } from '../domain/timeline.js';
+import { compareLinks } from '../domain/links.js';
 import { collectPeople, daysSince, followUpInfo, isFollowUpDue, isOtherOwner, lastFollowUp, personKey, personName, waitingSince } from '../domain/followup.js';
 import { TIMER, activeTimers, elapsedSeconds, summarize, timerState, totalsByTask } from '../domain/timetracking.js';
 import { activeWeekItems, planLoad, weekSections, weekSummary } from '../domain/weekplan.js';
@@ -863,6 +864,20 @@ export function createSelectors(app) {
         const list = store.byIndex('notes', 'entity_id', id).filter((note) => note.entity_type === type);
         if (!list.length) return EMPTY;
         return Object.freeze(list.sort((a, b) => cmpText(String(b.created_at || ''), String(a.created_at || '')) || cmpText(String(b.id), String(a.id))));
+      });
+    },
+
+    /**
+     * Links não removidos de uma entidade, na ordem de exibição (sort_order, depois created_at).
+     * @param {'demand'|'task'|'project'} type
+     * @param {string} id
+     * @returns {ReadonlyArray<object>}
+     */
+    links(type, id) {
+      return memo(`links|${type}|${id}`, () => {
+        const list = store.byIndex('links', 'entity_id', id).filter((link) => link.entity_type === type);
+        if (!list.length) return EMPTY;
+        return Object.freeze(list.sort(compareLinks));
       });
     },
 

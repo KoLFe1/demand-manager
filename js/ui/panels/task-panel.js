@@ -46,6 +46,7 @@ import {
   taskRow,
   timerControl,
 } from '../shared/entity.js';
+import { linksSection } from './links-section.js';
 
 const TASK_TABS = ['details', 'time', 'history'];
 const hasId = (id) => id !== null && id !== undefined && id !== '';
@@ -803,6 +804,7 @@ function detailsTab(app, task, pctx) {
     section('Descrição', { icon: 'file-text', key: 'description' }, longTextField(app, 'task', task, 'description', { placeholder: 'Adicione uma descrição…', ariaLabel: 'Descrição', rows: 3 })),
     subtasksSection(app, task),
     dependenciesSection(app, task, pctx),
+    linksSection(app, 'task', task.id, pctx),
     notesSection(app, 'task', task.id),
   );
 }

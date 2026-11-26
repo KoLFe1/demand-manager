@@ -49,6 +49,7 @@ import {
   saveFields,
   section,
 } from './task-panel.js';
+import { linksSection } from './links-section.js';
 
 const DEMAND_TABS = ['details', 'tasks', 'history'];
 const nameOf = (entity) => (entity && typeof entity.name === 'string' && entity.name.trim() ? entity.name.trim() : 'Sem nome');
@@ -126,7 +127,7 @@ function categoryControl(app, demand) {
   );
 }
 
-function detailsTab(app, demand) {
+function detailsTab(app, demand, pctx) {
   const sum = tasksEstimate(app, demand);
   const tracked = app.sel.trackedSecondsOfDemand(demand.id);
   return h(
@@ -166,6 +167,7 @@ function detailsTab(app, demand) {
     section('Objetivo', { icon: 'target', key: 'objective' }, longTextField(app, 'demand', demand, 'objective', { placeholder: 'Por que esta demanda existe? Qual resultado se espera?', ariaLabel: 'Objetivo' })),
     section('Entregáveis', { icon: 'check-circle', key: 'deliverables' }, longTextField(app, 'demand', demand, 'deliverables', { placeholder: 'O que será entregue ao final?', ariaLabel: 'Entregáveis' })),
     section('Descrição', { icon: 'file-text', key: 'description' }, longTextField(app, 'demand', demand, 'description', { placeholder: 'Adicione uma descrição…', ariaLabel: 'Descrição', rows: 3 })),
+    linksSection(app, 'demand', demand.id, pctx),
     notesSection(app, 'demand', demand.id),
   );
 }
@@ -368,7 +370,7 @@ function renderDemand(app, id, ctx) {
           { id: 'history', label: 'Histórico', count: history.length || null },
         ],
       }),
-      tab === 'tasks' ? tasksTab(app, demand, pctx) : tab === 'history' ? historyTab(app, 'demand', demand.id, pctx) : detailsTab(app, demand),
+      tab === 'tasks' ? tasksTab(app, demand, pctx) : tab === 'history' ? historyTab(app, 'demand', demand.id, pctx) : detailsTab(app, demand, pctx),
     ),
   );
 }
