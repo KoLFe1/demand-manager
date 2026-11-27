@@ -12,7 +12,9 @@
 //
 // Na primeira visita a página envia { type: 'cache-urls', urls } com tudo o que carregou, para o cache
 // ficar completo sem esperar uma segunda visita. Mude CACHE_VERSION a cada publicação (igual a APP_VERSION
-// em js/boot.js — um teste confere): os caches antigos são apagados na ativação.
+// em js/boot.js — um teste confere): os caches antigos são apagados na ativação, e os endereços que eles
+// guardavam são baixados de novo (da rede) para o cache novo. A página pode perguntar { type: 'version' }
+// (resposta pela porta: { version }) para não avisar "Nova versão" quando já roda a mesma versão do worker.
 
 const CACHE_VERSION = 'v001';
 const CACHE_PREFIX = 'dm-shell-';
@@ -46,8 +48,21 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
       const names = await caches.keys();
-      await Promise.all(names.filter((name) => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME).map((name) => caches.delete(name)));
+      const old = names.filter((name) => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME);
+      // Endereços que a versão anterior guardava (a lista completa do app): baixados de novo da REDE para o
+      // cache novo — o conteúdo velho nunca é copiado (misturaria módulos). Sem isso, quem atualiza e escolhe
+      // "Depois" (ou fecha a página) ficaria com um cache só com SHELL_URLS e o app não abriria offline.
+      const previous = [];
+      for (const name of old) {
+        try {
+          for (const request of await (await caches.open(name)).keys()) previous.push(request.url);
+        } catch {
+          /* cache ilegível: segue */
+        }
+      }
+      await Promise.all(old.map((name) => caches.delete(name)));
       await self.clients.claim();
+      await cacheUrls(previous);
     })(),
   );
 });
@@ -150,25 +165,33 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(networkFirst(request));
 });
 
+/** Baixa da rede (revalidando) e guarda no cache atual os endereços da lista que ainda não estão nele. */
+async function cacheUrls(urls) {
+  const cache = await caches.open(CACHE_NAME);
+  for (const raw of urls.slice(0, 400)) {
+    try {
+      const url = new URL(String(raw), self.location.href);
+      if (url.origin !== self.location.origin || UNCACHED_PATHS.test(url.pathname)) continue;
+      url.hash = '';
+      url.search = '';
+      if (await cache.match(url.href)) continue;
+      const response = await fetch(url.href, { cache: 'no-cache', credentials: 'same-origin' });
+      if (response.ok && response.type === 'basic') await cache.put(url.href, response);
+    } catch {
+      /* um recurso que falhou não impede os outros */
+    }
+  }
+}
+
 self.addEventListener('message', (event) => {
   const data = event.data;
-  if (!data || data.type !== 'cache-urls' || !Array.isArray(data.urls)) return;
-  event.waitUntil(
-    (async () => {
-      const cache = await caches.open(CACHE_NAME);
-      for (const raw of data.urls.slice(0, 400)) {
-        try {
-          const url = new URL(String(raw), self.location.href);
-          if (url.origin !== self.location.origin || UNCACHED_PATHS.test(url.pathname)) continue;
-          url.hash = '';
-          url.search = '';
-          if (await cache.match(url.href)) continue;
-          const response = await fetch(url.href, { cache: 'no-cache', credentials: 'same-origin' });
-          if (response.ok && response.type === 'basic') await cache.put(url.href, response);
-        } catch {
-          /* um recurso que falhou não impede os outros */
-        }
-      }
-    })(),
-  );
+  if (!data) return;
+  // A página pergunta qual versão este worker serve (para não avisar "Nova versão" quando já roda a mesma).
+  if (data.type === 'version') {
+    const port = event.ports && event.ports[0];
+    if (port) port.postMessage({ version: CACHE_VERSION });
+    return;
+  }
+  if (data.type !== 'cache-urls' || !Array.isArray(data.urls)) return;
+  event.waitUntil(cacheUrls(data.urls));
 });

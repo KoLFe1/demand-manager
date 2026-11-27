@@ -4,7 +4,7 @@
 // O service worker NÃO é registrado fora de http(s), nem com ?nosw=1, ?demo=1 ou ?db=NOME (testes e
 // demonstração não devem deixar caches para trás).
 
-import { appResourceUrls, boot, shouldRegisterServiceWorker } from './boot.js';
+import { APP_VERSION, appResourceUrls, boot, shouldRegisterServiceWorker, workerVersion } from './boot.js';
 import { toast } from './ui/kit/overlays.js';
 
 /** Lista de recursos que esta página já carregou, sem query/hash (o worker guarda tudo no cache já na primeira visita). */
@@ -23,9 +23,16 @@ async function registerServiceWorker() {
   const container = navigator.serviceWorker;
   const hadController = !!container.controller;
   let reloading = false;
-  container.addEventListener('controllerchange', () => {
+  container.addEventListener('controllerchange', async () => {
+    const worker = container.controller;
+    // O worker novo tem cache próprio (o antigo foi apagado): manda a lista do que esta página carregou, senão
+    // quem escolher "Depois" fica sem o app offline até a próxima abertura com rede.
+    if (worker) worker.postMessage({ type: 'cache-urls', urls: loadedResources() });
     // Primeira instalação: o worker passa a controlar a página, mas o app não mudou — nada a avisar.
     if (!hadController || reloading) return;
+    // A página já roda a versão que o worker novo serve (ela veio da rede pelo worker antigo): nada a recarregar.
+    if ((await workerVersion(worker)) === APP_VERSION) return;
+    if (reloading) return;
     toast('Nova versão disponível', {
       id: 'sw-update',
       duration: 0,

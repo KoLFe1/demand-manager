@@ -34,6 +34,34 @@ import { loadViews } from './ui/views/index.js';
 export const APP_VERSION = 'v001';
 
 /**
+ * Pergunta a um service worker qual versão (CACHE_VERSION) ele serve. Workers antigos não respondem: null.
+ * @param {{ postMessage: Function }|null} worker
+ * @param {{ timeoutMs?: number, Channel?: typeof MessageChannel }} [options]
+ * @returns {Promise<string|null>}
+ */
+export function workerVersion(worker, { timeoutMs = 1500, Channel = globalThis.MessageChannel } = {}) {
+  return new Promise((resolve) => {
+    if (!worker || typeof worker.postMessage !== 'function' || typeof Channel !== 'function') {
+      resolve(null);
+      return;
+    }
+    const channel = new Channel();
+    const timer = setTimeout(() => resolve(null), timeoutMs);
+    channel.port1.onmessage = (event) => {
+      clearTimeout(timer);
+      const version = event.data && event.data.version;
+      resolve(typeof version === 'string' ? version : null);
+    };
+    try {
+      worker.postMessage({ type: 'version' }, [channel.port2]);
+    } catch {
+      clearTimeout(timer);
+      resolve(null);
+    }
+  });
+}
+
+/**
  * Endereços (sem query nem hash) dos recursos desta origem que a página carregou — a lista enviada ao service
  * worker. Tirar a query evita que textos passados por parâmetro (ex.: compartilhamento) vão para o cache.
  * @param {string} origin location.origin
