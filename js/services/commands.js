@@ -707,7 +707,14 @@ export function createCommands(app) {
     }
     patch.deleted_at = null;
     const updated = store.update('tasks', row.id, patch);
-    auditDiff('task', row, patch, meta);
+    // A troca de status (ex.: a ocorrência fora concluída antes do "Desfazer") vira UM evento de status, como
+    // em qualquer outra troca — o histórico e as métricas leem o status por esses eventos.
+    const { status: _status, ...fields } = patch;
+    auditDiff('task', row, fields, meta);
+    if (patch.status !== undefined) {
+      const tr = transitionPatch(row, patch.status, { statuses: list, nowIso: now });
+      log(statusEvent('task', row, tr, { nowIso: now, deviceId: app.deviceId, auto: true }));
+    }
     return updated;
   }
 
@@ -813,6 +820,12 @@ export function createCommands(app) {
       if (!sameValue(row[key], clean[key])) fields[key] = clean[key];
     }
     const statusChanging = clean.status !== undefined && clean.status !== row.status;
+    // Item concluído/cancelado não tem o que cobrar: "Cobrar em" só é aceito junto com uma reabertura
+    // (concluir junto limpa a data na própria troca de status).
+    if (fields.follow_up_date && !statusChanging) {
+      const category = categoryOf(list, row.status);
+      if (category === 'done' || category === 'cancelled') fail('invalid_status', 'Este item já foi concluído ou cancelado: não há o que cobrar.', { type, id: row.id, field: 'follow_up_date' });
+    }
     const statusOpts = {};
     if (statusChanging) {
       // Motivo do bloqueio / de quem se espera informados junto com o status entram na própria transição.
