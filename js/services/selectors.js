@@ -31,6 +31,7 @@ import { demandProgress, projectProgress, taskFraction } from '../domain/progres
 import { isCancelled, isClosed, isOpen, resolveStatuses, statusById } from '../domain/statuses.js';
 import { indexEvents } from '../domain/timeline.js';
 import { compareLinks } from '../domain/links.js';
+import { availableTemplates, templatesFromSettings } from '../domain/templates.js';
 import { collectPeople, daysSince, followUpInfo, isFollowUpDue, isOtherOwner, lastFollowUp, personKey, personName, waitingSince } from '../domain/followup.js';
 import { TIMER, activeTimers, elapsedSeconds, summarize, timerState, totalsByTask } from '../domain/timetracking.js';
 import { activeWeekItems, planLoad, weekSections, weekSummary } from '../domain/weekplan.js';
@@ -463,6 +464,16 @@ export function createSelectors(app) {
      */
     status(id) {
       return Object.freeze(statusById(statuses(), id));
+    },
+
+    // ----- modelos --------------------------------------------------------------------------------
+    /**
+     * Modelos disponíveis: os embutidos e depois os salvos ativos (configurações `template:<id>` com valor
+     * ≠ null), estes por nome. Salvos inválidos vindos de sincronização são ignorados.
+     * @returns {ReadonlyArray<object>}
+     */
+    templates() {
+      return memo('templates', () => Object.freeze(availableTemplates(templatesFromSettings(store.all('settings')))));
     },
 
     // ----- entidades ------------------------------------------------------------------------------

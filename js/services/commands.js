@@ -30,7 +30,7 @@ import { DEFAULT_FOLLOWUP_DAYS, isOtherOwner, nextFollowUpDate, personName, resu
 import { compareManualOrder } from '../domain/filters.js';
 import { ENTRY_SOURCE, TIMER, ValidationError, findOverlaps, formatDuration, manualEntryValues, pausePatch, resumePatch, startValues, stopPatch, timerState } from '../domain/timetracking.js';
 import { WEEK_KIND, allWeekItems, carryOverPlan, kindForNewItem } from '../domain/weekplan.js';
-import { MAX_TEMPLATES, TemplateError, availableTemplates, isBuiltinTemplate, normalizeTemplate, normalizeTemplateList, planTemplate } from '../domain/templates.js';
+import { MAX_TEMPLATES, TemplateError, availableTemplates, isBuiltinTemplate, isTemplateSettingKey, normalizeTemplate, normalizeTemplateSetting, planTemplate, templateSettingKey, templatesFromSettings } from '../domain/templates.js';
 import { classifyTarget, compareLinks } from '../domain/links.js';
 import { derivedUuid, uuid } from '../core/ids.js';
 import { RecurrenceError, carriedRecurrence, nextOccurrenceFrom, normalizeRecurrence, occurrenceBase } from '../domain/recurrence.js';
@@ -104,13 +104,6 @@ const SETTING_RULES = Object.freeze({
   'followup.defaultDays': (v) => (Number.isInteger(v) && v >= 1 && v <= 30 ? v : undefined),
   statuses: (v) => (v === null || (Array.isArray(v) && v.every((s) => s && typeof s === 'object' && typeof s.id === 'string' && s.id)) ? v : undefined),
   'suggestions.dismissed': (v) => (Array.isArray(v) && v.every((s) => typeof s === 'string') ? v : undefined),
-  templates: (v) => {
-    try {
-      return normalizeTemplateList(v);
-    } catch {
-      return undefined;
-    }
-  },
 });
 
 const SETTING_MESSAGES = Object.freeze({
@@ -122,7 +115,6 @@ const SETTING_MESSAGES = Object.freeze({
   'followup.defaultDays': 'O prazo para cobrar de novo deve ser um número inteiro de dias úteis, de 1 a 30.',
   statuses: 'A personalização de status precisa ser uma lista de status com identificador.',
   'suggestions.dismissed': 'A lista de sugestões dispensadas é inválida.',
-  templates: `Lista de modelos inválida (no máximo ${MAX_TEMPLATES} modelos de até 100 tarefas, sem chaves repetidas nem dependências em ciclo).`,
 });
 
 // ---------------------------------------------------------------------------
@@ -938,24 +930,22 @@ export function createCommands(app) {
   }
 
   // --- modelos ----------------------------------------------------------------------------------
-  /** Modelos salvos válidos (configuração 'templates'). */
+  /** Modelos salvos ativos (configurações `template:<id>` com valor ≠ null). */
   function savedTemplates() {
-    const row = store.get('settings', 'templates');
-    return availableTemplates(row ? row.value : null).filter((t) => !t.builtin);
+    return templatesFromSettings(store.all('settings'));
   }
 
   function templateById(id) {
-    const row = store.get('settings', 'templates');
-    const template = availableTemplates(row ? row.value : null).find((t) => t.id === id);
+    const template = availableTemplates(savedTemplates()).find((t) => t.id === id);
     if (!template) fail('template_not_found', 'Modelo não encontrado: ele pode ter sido excluído.', { id });
     return template;
   }
 
-  function editableTemplateIndex(saved, id) {
+  function editableTemplate(id) {
     if (isBuiltinTemplate(id)) fail('template_builtin', 'O modelo embutido não pode ser alterado.', { id });
-    const index = saved.findIndex((t) => t.id === id);
-    if (index < 0) fail('template_not_found', 'Modelo não encontrado: ele pode ter sido excluído.', { id });
-    return index;
+    const template = savedTemplates().find((t) => t.id === id);
+    if (!template) fail('template_not_found', 'Modelo não encontrado: ele pode ter sido excluído.', { id });
+    return template;
   }
 
   // --- exclusão / restauração --------------------------------------------------------------------
@@ -1225,7 +1215,7 @@ export function createCommands(app) {
 
     // ----- modelos de demanda ---------------------------------------------------------------------
     /**
-     * Cria uma demanda a partir de um modelo (embutido ou salvo em 'templates'), com tarefas, subtarefas e
+     * Cria uma demanda a partir de um modelo (embutido ou salvo em `template:<id>`), com tarefas, subtarefas e
      * dependências. Responsável = 'owner.default'. Com `startDate`, as tarefas recebem início/prazo em dias úteis
      * (planTemplate) e a demanda começa em startDate e vence no fim da última tarefa. O evento 'created' da
      * demanda leva meta.template = { id, name }.
@@ -1287,7 +1277,7 @@ export function createCommands(app) {
     }),
 
     /**
-     * Salva uma demanda como modelo (anexado à configuração 'templates'): tarefas de nível superior não
+     * Salva uma demanda como modelo (configuração própria `template:<id>`): tarefas de nível superior não
      * arquivadas (com os nomes das subtarefas), deslocamentos em dias úteis a partir do menor início planejado
      * (sem início = 0), durações, estimativas e só as dependências entre as tarefas copiadas.
      * @param {string} demandId
@@ -1328,12 +1318,12 @@ export function createCommands(app) {
         const list = byKey.get(from).dependsOn;
         if (!list.includes(to)) list.push(to);
       }
-      const saved = savedTemplates();
-      if (saved.length >= MAX_TEMPLATES) fail('too_many_templates', `É possível guardar no máximo ${MAX_TEMPLATES} modelos. Exclua algum em Configurações.`, { count: saved.length });
+      const count = savedTemplates().length;
+      if (count >= MAX_TEMPLATES) fail('too_many_templates', `É possível guardar no máximo ${MAX_TEMPLATES} modelos. Exclua algum em Configurações.`, { count });
       const name = typeof opts.name === 'string' && opts.name.trim() ? opts.name : demand.name;
       const description = typeof opts.description === 'string' ? opts.description : demand.description ? excerptOf(demand.description) : null;
       const template = normalizeTemplate({ id: uuid(), name, description, tasks });
-      cmd.setSetting('templates', [...saved, template]);
+      cmd.setSetting(templateSettingKey(template.id), template);
       return template;
     }),
 
@@ -1345,10 +1335,8 @@ export function createCommands(app) {
      * @throws {CommandError} template_builtin | template_not_found | invalid_template
      */
     renameTemplate: define('renameTemplate', (templateId, name) => {
-      const saved = savedTemplates();
-      const index = editableTemplateIndex(saved, templateId);
-      const updated = normalizeTemplate({ ...saved[index], name });
-      cmd.setSetting('templates', saved.map((t, i) => (i === index ? updated : t)));
+      const updated = normalizeTemplate({ ...editableTemplate(templateId), name });
+      cmd.setSetting(templateSettingKey(updated.id), updated);
       return updated;
     }),
 
@@ -1359,10 +1347,9 @@ export function createCommands(app) {
      * @throws {CommandError} template_builtin | template_not_found
      */
     deleteTemplate: define('deleteTemplate', (templateId) => {
-      const saved = savedTemplates();
-      const index = editableTemplateIndex(saved, templateId);
-      cmd.setSetting('templates', saved.filter((_, i) => i !== index));
-      return saved[index];
+      const template = editableTemplate(templateId);
+      cmd.setSetting(templateSettingKey(template.id), null);
+      return template;
     }),
 
     /**
@@ -2307,7 +2294,7 @@ export function createCommands(app) {
      * @param {string} key
      * @param {*} value qualquer valor JSON
      * @returns {object} linha de settings
-     * @throws {CommandError} invalid_setting
+     * @throws {CommandError} invalid_setting | too_many_templates (chave `template:<id>` nova com 50 modelos ativos)
      */
     setSetting: define('setSetting', (key, value) => {
       if (typeof key !== 'string' || !key.trim()) fail('invalid_setting', 'Informe a chave da configuração.', { key });
@@ -2316,6 +2303,18 @@ export function createCommands(app) {
       if (rule && clean !== null) {
         clean = rule(clean);
         if (clean === undefined) fail('invalid_setting', SETTING_MESSAGES[key], { key, value });
+      } else if (isTemplateSettingKey(key) && clean !== null) {
+        try {
+          clean = normalizeTemplateSetting(key, clean);
+        } catch (e) {
+          fail('invalid_setting', e instanceof TemplateError ? `Modelo inválido: ${e.message}` : 'Modelo inválido.', { key, value });
+        }
+        const current = store.get('settings', key);
+        const isNew = !current || current.value === null || current.value === undefined;
+        if (isNew) {
+          const count = savedTemplates().length;
+          if (count >= MAX_TEMPLATES) fail('too_many_templates', `É possível guardar no máximo ${MAX_TEMPLATES} modelos. Exclua algum em Configurações.`, { count });
+        }
       }
       let text;
       try {

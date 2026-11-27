@@ -5,7 +5,8 @@
 //     subtasks?: [{ name }], dependsOn: [keys] }] }
 // • offsetDays  = dias ÚTEIS entre o início da demanda e o início da tarefa;
 // • durationDays = duração em dias úteis (0 = marco: começa e termina no mesmo dia).
-// Os modelos salvos ficam na configuração sincronizada 'templates' (lista); o embutido não é gravado.
+// Cada modelo salvo é uma configuração sincronizada própria, `template:<id>` (valor null = excluído); o
+// embutido não é gravado.
 
 import { addWorkdays, isValidDateStr } from '../core/dates.js';
 
@@ -169,25 +170,50 @@ function findTemplateCycle(tasks) {
   return null;
 }
 
+/** Prefixo das configurações de modelo: uma linha `template:<id>` por modelo (LWW próprio; excluído = null). */
+export const TEMPLATE_KEY_PREFIX = 'template:';
+
+/** Chave da configuração de um modelo salvo. */
+export const templateSettingKey = (id) => TEMPLATE_KEY_PREFIX + id;
+
+/** true se a chave de configuração é de um modelo salvo. */
+export const isTemplateSettingKey = (key) => typeof key === 'string' && key.startsWith(TEMPLATE_KEY_PREFIX) && key.length > TEMPLATE_KEY_PREFIX.length;
+
 /**
- * Valida a lista de modelos salvos (configuração 'templates'): no máximo MAX_TEMPLATES, ids únicos e que não
- * colidem com os embutidos.
- * @returns {object[]} lista normalizada
+ * Valida o valor da configuração `template:<id>`: o id do modelo é sempre o da chave; não pode colidir com
+ * um embutido.
+ * @returns {object} modelo normalizado
  * @throws {TemplateError}
  */
-export function normalizeTemplateList(list) {
-  if (!Array.isArray(list)) fail('invalid_template', 'Os modelos precisam ser uma lista.');
-  if (list.length > MAX_TEMPLATES) fail('too_many_templates', `É possível guardar no máximo ${MAX_TEMPLATES} modelos.`, { count: list.length });
-  const ids = new Set();
-  return list.map((item) => {
-    const t = normalizeTemplate(item);
-    if (ids.has(t.id) || isBuiltinTemplate(t.id)) fail('duplicate_key', `Identificador de modelo repetido: ${t.id}.`, { id: t.id });
-    ids.add(t.id);
-    return t;
-  });
+export function normalizeTemplateSetting(key, value) {
+  if (!isTemplateSettingKey(key)) fail('invalid_template', 'Chave de modelo inválida.', { key });
+  const id = key.slice(TEMPLATE_KEY_PREFIX.length);
+  if (isBuiltinTemplate(id)) fail('duplicate_key', `Identificador de modelo repetido: ${id}.`, { id });
+  if (!value || typeof value !== 'object' || Array.isArray(value)) fail('invalid_template', 'Modelo inválido.');
+  return normalizeTemplate({ ...value, id });
 }
 
-/** Modelos disponíveis: embutidos + salvos válidos (salvos inválidos vindos de sincronização são ignorados). */
+/**
+ * Modelos salvos ativos a partir das linhas de configuração (`template:<id>` com valor ≠ null); linhas
+ * inválidas vindas de sincronização são ignoradas. Ordenados por nome.
+ * @param {Iterable<{ key?: string, id?: string, value: any }>} rows
+ * @returns {object[]}
+ */
+export function templatesFromSettings(rows) {
+  const out = [];
+  for (const row of rows || []) {
+    const key = row && (row.key || row.id);
+    if (!isTemplateSettingKey(key) || row.value === null || row.value === undefined) continue;
+    try {
+      out.push(normalizeTemplateSetting(key, row.value));
+    } catch {
+      /* ignora modelo inválido */
+    }
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+
+/** Modelos disponíveis: embutidos + salvos válidos (salvos inválidos ou com id repetido são ignorados). */
 export function availableTemplates(saved) {
   const out = [...BUILTIN_TEMPLATES];
   const ids = new Set(out.map((t) => t.id));

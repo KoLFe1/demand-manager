@@ -4,11 +4,12 @@
 //   const demanda = await openTemplateDialog(app);          // demanda criada (aberta no painel) ou null
 //   await saveDemandAsTemplate(app, demandId);               // pede o nome e salva
 //
-// Os modelos salvos ficam na configuração sincronizada 'templates'; o embutido vem de domain/templates.js.
+// Cada modelo salvo é uma configuração sincronizada `template:<id>` (app.sel.templates() junta embutidos e
+// salvos); o embutido vem de domain/templates.js.
 
 import { cx, h } from '../core/dom.js';
 import { formatDate } from '../core/dates.js';
-import { availableTemplates, planTemplate } from '../domain/templates.js';
+import { planTemplate } from '../domain/templates.js';
 import { dateInput, field, selectInput, textInput } from './kit/controls.js';
 import { icon } from './kit/icons.js';
 import { confirmDialog, openModal, promptDialog } from './kit/overlays.js';
@@ -19,7 +20,7 @@ const isCommandError = (err) => !!err && typeof err === 'object' && err.name ===
 
 /** Modelos disponíveis (embutido + salvos válidos). */
 export function listTemplates(app) {
-  return availableTemplates(app.settings.get('templates', null));
+  return app.sel.templates();
 }
 
 const daysText = (n) => (n === 1 ? '1 dia útil' : `${n} dias úteis`);
