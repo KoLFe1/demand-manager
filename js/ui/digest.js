@@ -91,10 +91,9 @@ function renderBody(app, digest, close) {
   return h(
     'div',
     { class: 'digest', 'data-digest': digest.today },
-    h('p', { class: 'digest-headline' }, digestHeadline(digest)),
     sections.length || digest.weekPlan
-      ? null
-      : emptyState({ icon: 'check-circle', title: 'Nada urgente hoje', text: 'Sem atrasos, vencimentos próximos ou cobranças.', compact: true }),
+      ? h('p', { class: 'digest-headline' }, digestHeadline(digest))
+      : emptyState({ icon: 'check-circle', title: 'Nada urgente hoje', text: 'Sem atrasos, vencimentos próximos nem cobranças. Bom momento para planejar a semana.', compact: true, action: button({ label: 'Abrir Minha Semana', icon: 'calendar-week', size: 'sm', attrs: { 'data-action': 'digest-week' }, onclick: () => { close('week'); if (app.ui) app.ui.navigate('/semana'); } }) }),
     sections.map((s) =>
       h(
         'section',

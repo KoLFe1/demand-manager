@@ -903,7 +903,12 @@ function renderAbout(app) {
       { class: 'v-config-note' },
       'O script do servidor fica no arquivo supabase/schema.sql, dentro da pasta do aplicativo. Para preparar (ou atualizar) o Supabase, copie o conteúdo inteiro e execute-o no SQL Editor do projeto — ele pode ser executado de novo sem perder dados.',
     ),
-    h('div', { class: 'v-config-actions' }, button({ label: 'Atalhos de teclado', icon: 'keyboard', size: 'sm', variant: 'ghost', onclick: () => app.ui && app.ui.showHelp && app.ui.showHelp() })),
+    h(
+      'div',
+      { class: 'v-config-actions' },
+      button({ label: 'Ver novidades', icon: 'sparkles', size: 'sm', variant: 'ghost', attrs: { 'data-action': 'show-whatsnew' }, onclick: () => app.ui && app.ui.showWhatsNew && app.ui.showWhatsNew() }),
+      button({ label: 'Atalhos de teclado', icon: 'keyboard', size: 'sm', variant: 'ghost', attrs: { 'data-action': 'show-help' }, onclick: () => app.ui && app.ui.showHelp && app.ui.showHelp() }),
+    ),
   );
 }
 

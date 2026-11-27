@@ -1385,6 +1385,96 @@ body {
   font-size: var(--fs-xs);
 }
 
+/* ------------------------------------------------------------------ novidades da versão */
+.wn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.wn-lead,
+.wn-foot {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.wn-foot {
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+}
+
+.wn-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wn-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.wn-item:last-child {
+  border-bottom: 0;
+}
+
+.wn-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.wn-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.wn-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+}
+
+.wn-text {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.wn-go {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+@media (max-width: 560px) {
+  .wn-item {
+    flex-wrap: wrap;
+  }
+
+  .wn-main {
+    flex-basis: calc(100% - 28px - var(--sp-3));
+  }
+
+  .wn-go {
+    margin-left: calc(28px + var(--sp-3) - var(--sp-2));
+    margin-top: calc(-1 * var(--sp-1));
+    align-self: flex-start;
+  }
+}
+
 /* ------------------------------------------------------------------ diálogos de projeto e conta */
 .project-swatches {
   display: flex;

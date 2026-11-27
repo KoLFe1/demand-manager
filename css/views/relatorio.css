@@ -209,7 +209,8 @@
   body:has(.v-relatorio) .shell-panel,
   body:has(.v-relatorio) .shell-backdrop,
   body:has(.v-relatorio) .toast-stack,
-  body:has(.v-relatorio) .v-rel-toolbar {
+  body:has(.v-relatorio) .v-rel-toolbar,
+  body:has(.v-relatorio) .v-rel-empty .empty-action {
     display: none !important;
   }
 

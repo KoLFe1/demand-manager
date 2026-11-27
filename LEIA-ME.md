@@ -29,7 +29,7 @@ backup de vez em quando em **Configurações → Dados → Exportar backup**.
 1. Crie uma conta em <https://supabase.com> e um projeto novo (o plano gratuito basta).
 2. No painel do projeto, abra **SQL Editor → New query**. Cole o arquivo
    [`supabase/schema.sql`](supabase/schema.sql) **inteiro** e clique em **Run**. O resultado deve mostrar
-   `Demand Manager: banco pronto (versão 2)`.
+   `Demand Manager: banco pronto (versão 3)`.
    O editor pode avisar sobre operações "destrutivas" (`drop policy`/`drop trigger`): é esperado; nenhum
    dado é apagado. O script pode ser executado de novo depois de atualizações do app.
 3. Em **Authentication → URL Configuration**, preencha **Site URL** com o endereço onde você abre o app
@@ -59,20 +59,54 @@ Repita os passos 5 e 6 em cada dispositivo (com a mesma conta). Alternativa: pre
 - "Banco do servidor desatualizado" significa que o app foi atualizado: execute `supabase/schema.sql`
   de novo (passo 2).
 
+### Atualizar o banco para a v001 (versão 3 do banco)
+
+A v001 do app precisa do banco na **versão 3** (tarefas recorrentes, data de cobrança e links). Rode
+`supabase/schema.sql` **inteiro de novo** no SQL Editor (passo 2): nada é apagado e o resultado deve
+mostrar `banco pronto (versão 3)`. Enquanto isso não for feito, o app avisa "Banco do servidor
+desatualizado" e não sincroniza (os dados continuam salvos no aparelho).
+
 ## 3. Usar no celular
 
 O app é uma página estática instalável (PWA). Para abrir no celular é preciso hospedá-lo num endereço
 HTTPS: por exemplo GitHub Pages, Netlify ou Cloudflare Pages, publicando esta pasta como está (não há
 etapa de build). Pastas `tests/`, `tools/`, `dev/` e `docs/` não são necessárias na hospedagem. Depois de
-publicar, inclua o endereço em **Site URL / Redirect URLs** do Supabase (passo 3) e, no celular, use
-"Adicionar à tela inicial".
+publicar, inclua o endereço em **Site URL / Redirect URLs** do Supabase (passo 3) e instale o app:
+no Android/Chrome, menu → **Instalar app**; no iPhone (Safari), Compartilhar → **Adicionar à Tela de Início**.
 
-## 4. Atalhos principais
+**Captura rápida** (detalhes em Configurações → Captura rápida): com o app instalado no Android, use
+**Compartilhar → Demand Manager** num e-mail, mensagem ou página; no iPhone, crie um **Atalho** (app
+Atalhos) com "Abrir URL" e o endereço mostrado nas Configurações; no computador, arraste o favorito
+**+ Demand Manager** para a barra de favoritos. Em todos os casos a "Nova tarefa" abre preenchida e você
+confirma — nada é criado sozinho.
+
+## 4. Novidades da v001
+
+Na primeira abertura depois de atualizar, o app mostra as novidades uma vez (de novo em
+Configurações → Sobre → **Ver novidades**).
+
+- **Aguardando** (`G` então `A`): o que depende de outras pessoas, com data de cobrança e "Cobrei".
+- **Cronograma** (`G` então `O`): Gantt de demandas e tarefas com dependências.
+- **Relatório de status** (`G` então `R`): por período/projeto; imprimir/PDF, copiar ou enviar por e-mail.
+- **Modelos de demanda**: Nova → "Demanda a partir de modelo…"; salve uma demanda como modelo pelo menu dela.
+- **Links e arquivos** e **Repetir** (tarefas recorrentes) no painel da demanda/tarefa.
+- **Resumo do dia**: no primeiro acesso do dia mostra atrasadas, vencimentos e cobranças (às segundas, a
+  semana anterior); também no sino do Início e em `Ctrl+K` → "Resumo do dia". Liga/desliga em
+  Configurações → Lembretes.
+- **Exportar .ics**: no Calendário (ou Configurações → Calendário externo) gere o arquivo de prazos.
+  - **Outlook** (computador): Arquivo → Abrir e Exportar → Importar/Exportar → "Importar um arquivo
+    iCalendar (.ics)"; no Outlook web: Calendário → Adicionar calendário → Carregar do arquivo.
+  - **Google Agenda** (computador): Configurações → Importar e exportar → Importar → escolha o arquivo e
+    o calendário.
+  - O arquivo é uma foto do momento: exporte de novo depois de mudar prazos (importar outra vez atualiza
+    os eventos já importados, sem duplicar).
+
+## 5. Atalhos principais
 
 `Ctrl+K` busca e comandos · `Shift+N` nova demanda · `N` nova tarefa · `1`–`4` prioridade da linha
-focada · `?` lista completa de atalhos.
+focada · `G` então `D/S/L/K/A/C/O/R…` muda de tela · `?` lista completa de atalhos.
 
-## 5. Para quem for mexer no código
+## 6. Para quem for mexer no código
 
 As pastas `tests/`, `tools/`, `dev/`, `docs/` e `js/dev/` ficam só na cópia local (estão no `.gitignore`):
 o repositório público contém apenas o app que roda no site.

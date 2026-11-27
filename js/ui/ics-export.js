@@ -139,7 +139,7 @@ export function openIcsDialog(app, defaults = {}) {
           switchInput({ checked: form.includeTasks, label: 'Prazos de tarefas', attrs: { 'data-ics': 'tasks' }, onchange: (v) => set({ includeTasks: v }) }),
           switchInput({ checked: form.includeDone, label: 'Incluir concluídas', attrs: { 'data-ics': 'done' }, onchange: (v) => set({ includeDone: v }) }),
         ),
-        h('p', { class: 'ics-dialog-count', 'data-ics-count': String(count), 'aria-live': 'polite' }, count ? `${plural(count, 'evento', 'eventos')} no arquivo.` : 'Nenhum prazo com essas opções.'),
+        h('p', { class: 'ics-dialog-count', 'data-ics-count': String(count), 'aria-live': 'polite' }, count ? `${plural(count, 'evento', 'eventos')} no arquivo.` : 'Nenhum prazo com essas opções. Defina prazos nas demandas ou tarefas (ou inclua as concluídas) para exportar.'),
       );
     };
     const confirm = async (close) => {

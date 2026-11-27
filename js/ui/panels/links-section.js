@@ -115,7 +115,7 @@ export function linksSection(app, type, id, { state, setState }) {
   return section(
     'Links e arquivos',
     { count: links.length || null, icon: 'link', class: 'pn-links', key: 'links' },
-    links.length ? h('ul', { class: 'pn-lk-list' }, links.map((link) => linkItem(app, link))) : h('p', { class: 'pn-empty-line' }, 'Nenhum link ainda.'),
+    links.length ? h('ul', { class: 'pn-lk-list' }, links.map((link) => linkItem(app, link))) : h('p', { class: 'pn-empty-line' }, 'Nenhum link ainda. Cole abaixo o caminho de uma pasta de rede, um arquivo ou um endereço web.'),
     h(
       'div',
       { class: 'pn-lk-new' },

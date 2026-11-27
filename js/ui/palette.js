@@ -11,6 +11,7 @@ import { emptyState } from './kit/display.js';
 import { icon } from './kit/icons.js';
 import { openModal } from './kit/overlays.js';
 import { projectDot } from './projects.js';
+import { openIcsDialog } from './ics-export.js';
 import { openTemplateDialog } from './templates.js';
 import { views } from './views/index.js';
 
@@ -98,6 +99,8 @@ function commandList(app) {
     { id: 'theme:dark', group: 'Tema', label: 'Tema escuro', keywords: 'tema aparencia escuro dark noturno', icon: 'moon', checked: theme === 'dark', run: () => ui.setTheme && ui.setTheme('dark') },
     { id: 'theme:system', group: 'Tema', label: 'Tema do sistema', keywords: 'tema aparencia sistema automatico', icon: 'circle-half', checked: theme === 'system', run: () => ui.setTheme && ui.setTheme('system') },
     { id: 'digest', group: 'Ações', label: 'Resumo do dia', keywords: 'resumo dia lembretes atrasadas vencimentos cobrancas hoje', icon: 'bell', keys: null, run: () => ui.showDigest && ui.showDigest() },
+    { id: 'ics', group: 'Ações', label: 'Exportar calendário (.ics)…', keywords: 'exportar ics calendario outlook google agenda prazos', icon: 'download', keys: null, run: () => openIcsDialog(app) },
+    { id: 'whatsnew', group: 'Ações', label: 'Novidades da versão', keywords: 'novidades versao atualizacao o que mudou recursos novos', icon: 'sparkles', keys: null, run: () => ui.showWhatsNew && ui.showWhatsNew() },
     { id: 'help', group: 'Ações', label: 'Atalhos de teclado', keywords: 'ajuda atalhos teclado', icon: 'keyboard', keys: '?', run: () => ui.showHelp && ui.showHelp() },
   );
   if (ui.scope && ui.scope.projectId) {

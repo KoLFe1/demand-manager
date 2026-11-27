@@ -8,7 +8,7 @@
 //   panel() → { type, id } | null, rerender(), toast(message, opts), scope: { projectId }, setScope(patch),
 //   viewState(viewId), setViewState(viewId, patch)   // estado de qualquer tela (ex.: abrir outra já filtrada)
 //   current() → { type, id } | null, quickCreate(type, defaults), isMobile(), theme(), setTheme(t),
-//   // extras: shortcuts, showHelp(), openPalette(query), showDigest(), checkDailyDigest(), createProject(), openSync(anchor), destroy()
+//   // extras: shortcuts, showHelp(), openPalette(query), showDigest(), checkDailyDigest(), showWhatsNew(), checkWhatsNew(), createProject(), openSync(anchor), destroy()
 // }
 //
 // Renderização: três mount() (core/dom.js) — casca, tela e painel. A casca deixa os hospedeiros da tela
@@ -28,6 +28,7 @@ import { TIMER, elapsedSeconds, formatDuration, isLongRunning, timerState } from
 import { alertsButton } from './alerts.js';
 import { accountSummary, openAccountDialog } from './auth.js';
 import { checkDailyDigest, openDigestModal } from './digest.js';
+import { checkWhatsNew, openWhatsNew } from './whatsnew.js';
 import { openShortcutHelp } from './help.js';
 import { button, iconButton, textArea } from './kit/controls.js';
 import { alertBox, avatar, countBadge } from './kit/display.js';
@@ -1324,6 +1325,10 @@ export function startShell(app, root) {
     showDigest: () => openDigestModal(app),
     /** 1º acesso do dia: abre o resumo se ligado, não vazio e ainda não mostrado hoje neste dispositivo. */
     checkDailyDigest: () => checkDailyDigest(app),
+    /** Abre as "Novidades da versão". */
+    showWhatsNew: () => openWhatsNew(app),
+    /** Abertura: mostra as novidades uma vez por versão (se há dados e nenhum diálogo aberto). */
+    checkWhatsNew: () => checkWhatsNew(app),
     /** Abre o diálogo de novo projeto. */
     createProject: () => openProjectDialog(app),
     /** Abre os detalhes da sincronização ancorados em `anchor`. */
@@ -1545,7 +1550,11 @@ export function startShell(app, root) {
     });
   }
   // "Resumo do dia": logo depois do primeiro desenho e quando o app volta a ficar visível (celular).
-  const digestTimer = win.setTimeout(() => checkDailyDigest(app), 700);
+  // Novidades da versão primeiro: se abrirem, o resumo encontra o diálogo aberto e espera a próxima verificação.
+  const digestTimer = win.setTimeout(() => {
+    checkWhatsNew(app);
+    checkDailyDigest(app);
+  }, 700);
   const onVisible = () => {
     if (doc.visibilityState === 'visible') checkDailyDigest(app);
   };

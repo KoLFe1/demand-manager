@@ -144,17 +144,20 @@ function groupView(app, group, tab) {
   );
 }
 
-function emptyView(tab) {
+function emptyView(app, tab) {
+  const toList = button({ label: 'Ir para Demandas', icon: 'list', variant: 'primary', size: 'sm', onclick: () => app.ui.navigate('/demandas'), attrs: { 'data-action': 'go-demandas' } });
   return tab === 'waiting'
     ? emptyState({
         icon: 'hourglass',
         title: 'Nada aguardando terceiros',
-        text: 'Quando uma tarefa ou demanda ficar em “Aguardando terceiros”, ela aparece aqui, agrupada pela pessoa de quem você espera o retorno.',
+        text: 'Mude o status de uma tarefa ou demanda para “Aguardando terceiros” e informe de quem você espera o retorno: ela aparece aqui, com a data de cobrança.',
+        action: toList,
       })
     : emptyState({
         icon: 'user',
         title: 'Nada com outras pessoas',
-        text: 'Tarefas e demandas abertas cujo responsável é outra pessoa aparecem aqui, agrupadas por responsável.',
+        text: 'Tarefas e demandas abertas cujo responsável é outra pessoa aparecem aqui, agrupadas por responsável. Defina o responsável no painel do item.',
+        action: toList,
       });
 }
 
@@ -193,7 +196,7 @@ function render(app, ctx) {
             text: 'Defina o seu nome como responsável padrão em Configurações: assim só os itens de outras pessoas aparecem nesta aba.',
           })
         : null,
-      groups.length ? h('div', { class: 'v-agu-groups' }, groups.map((g) => groupView(app, g, tab))) : emptyView(tab),
+      groups.length ? h('div', { class: 'v-agu-groups' }, groups.map((g) => groupView(app, g, tab))) : emptyView(app, tab),
     ),
   );
 }

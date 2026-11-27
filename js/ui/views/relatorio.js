@@ -260,7 +260,14 @@ export default {
       ),
       report.projects.length
         ? report.projects.map((project) => projectView(app, project))
-        : emptyState({ icon: 'file-text', title: 'Nada a relatar no período', text: 'Nenhuma conclusão, item em andamento, bloqueio, próximo passo ou atraso neste período e filtro.', compact: true, class: 'v-rel-empty' }),
+        : emptyState({
+            icon: 'file-text',
+            title: 'Nada a relatar no período',
+            text: 'Nenhuma conclusão, item em andamento, bloqueio, próximo passo ou atraso neste período e filtro. Escolha um período maior ou outro projeto.',
+            action: preset !== 'month' ? button({ label: 'Ver o mês atual', icon: 'calendar', variant: 'primary', size: 'sm', onclick: () => update({ preset: 'month' }), attrs: { 'data-action': 'report-month' } }) : null,
+            compact: true,
+            class: 'v-rel-empty',
+          }),
     );
 
     return h('div', { class: cx('v-relatorio', isMobile && 'is-mobile'), 'data-preset': preset }, toolbar, doc);
