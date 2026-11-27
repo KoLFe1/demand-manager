@@ -329,8 +329,17 @@
   padding: var(--sp-3) var(--sp-4);
 }
 
-.v-crono-undated-title {
+.v-crono-undated-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
   margin: 0 0 var(--sp-2);
+}
+
+.v-crono-undated-title {
+  margin: 0;
   font-size: var(--fs-md);
   font-weight: 600;
 }

@@ -32,6 +32,7 @@ import { ENTRY_SOURCE, TIMER, ValidationError, findOverlaps, formatDuration, man
 import { WEEK_KIND, allWeekItems, carryOverPlan, kindForNewItem } from '../domain/weekplan.js';
 import { MAX_TEMPLATES, TemplateError, availableTemplates, isBuiltinTemplate, isTemplateSettingKey, normalizeTemplate, normalizeTemplateSetting, planTemplate, templateSettingKey, templatesFromSettings } from '../domain/templates.js';
 import { classifyTarget, compareLinks } from '../domain/links.js';
+import { planEmptyDates } from '../domain/schedule.js';
 import { derivedUuid, uuid } from '../core/ids.js';
 import { RecurrenceError, carriedRecurrence, nextOccurrenceFrom, normalizeRecurrence, occurrenceBase } from '../domain/recurrence.js';
 
@@ -302,6 +303,21 @@ export function createCommands(app) {
   };
   const auditDiff = (type, before, patch, meta) => logAll(diffToEvents(type, before, patch, { nowIso: now, deviceId: app.deviceId, meta }));
   const event = (entityType, entityId, action, fields = {}) => log(makeEvent({ entityType, entityId, action, at: now, deviceId: app.deviceId, ...fields }));
+
+  /** Plano de "Agendar datas vazias" com os dados atuais do banco (domain/schedule.js). */
+  function planForSchedule(demand, startDate) {
+    const all = store.all('tasks');
+    const hours = Number(app.settings.get('capacity.hoursPerDay'));
+    return planEmptyDates({
+      demand,
+      tasks: tasksOfDemand(demand.id),
+      tasksById: new Map(all.map((t) => [t.id, t])),
+      graph: buildGraph(all, store.all('task_dependencies')),
+      statuses: statuses(),
+      startDate,
+      hoursPerDay: Number.isFinite(hours) && hours > 0 ? hours : 8,
+    });
+  }
 
   // --- validação de campos -----------------------------------------------------------------------
   /** Alvo de link validado (domain/links.js) ou CommandError 'invalid_target'. */
@@ -1253,6 +1269,56 @@ export function createCommands(app) {
       }
       copyDependencies(map);
       return copy;
+    }),
+
+    /**
+     * "Agendar datas vazias": preenche início planejado/prazo das tarefas abertas da demanda que têm as DUAS
+     * datas vazias (dependências, estimativas e dias úteis — ver domain/schedule.js) e, se vazios, o início/prazo
+     * da própria demanda. Nunca sobrescreve uma data. Cada campo é auditado com meta { auto: 'schedule' }.
+     * @param {string} demandId
+     * @param {{ startDate: string }} options
+     * @returns {{ changes: Array<{ type: 'task'|'demand', id: string, patch: object }>, end: string|null, warning: string|null, count: number }}
+     * @throws {CommandError} not_found | invalid_date
+     */
+    scheduleEmptyDates: define('scheduleEmptyDates', (demandId, options) => {
+      const demand = requireRow('demand', demandId);
+      const startDate = dateOrNull('planned_start', options && options.startDate);
+      if (!startDate) fail('invalid_date', 'Informe a data de início.', { field: 'planned_start' });
+      const plan = planForSchedule(demand, startDate);
+      const applied = [];
+      for (const change of plan.changes) {
+        const row = liveGet(ENTITY_TABLE[change.type], change.id);
+        if (!row) continue;
+        const patch = {};
+        for (const [field, value] of Object.entries(change.patch)) if (!isValidDateStr(row[field])) patch[field] = value;
+        if (!Object.keys(patch).length) continue;
+        store.update(ENTITY_TABLE[change.type], row.id, patch);
+        auditDiff(change.type, row, patch, { auto: 'schedule' });
+        applied.push(Object.freeze({ type: change.type, id: row.id, patch: Object.freeze(patch) }));
+      }
+      return Object.freeze({ changes: Object.freeze(applied), end: plan.end, warning: plan.warning, count: applied.filter((c) => c.type === 'task').length });
+    }),
+
+    /**
+     * Desfaz um "Agendar datas vazias": devolve a vazio cada campo que ainda tem o valor gravado pelo agendamento
+     * (campo alterado depois pelo usuário fica como está). Um único transact; auditoria meta { auto: 'schedule', undo: true }.
+     * @param {Array<{ type, id, patch }>} changes o `changes` devolvido por scheduleEmptyDates
+     * @returns {number} quantidade de registros restaurados
+     */
+    undoScheduleEmptyDates: define('undoScheduleEmptyDates', (changes) => {
+      let restored = 0;
+      for (const change of Array.isArray(changes) ? changes : []) {
+        const table = change && ENTITY_TABLE[change.type];
+        const row = table ? liveGet(table, change.id) : null;
+        if (!row || !change.patch) continue;
+        const patch = {};
+        for (const [field, value] of Object.entries(change.patch)) if ((field === 'planned_start' || field === 'due_date') && row[field] === value) patch[field] = null;
+        if (!Object.keys(patch).length) continue;
+        store.update(table, row.id, patch);
+        auditDiff(change.type, row, patch, { auto: 'schedule', undo: true });
+        restored += 1;
+      }
+      return restored;
     }),
 
     // ----- modelos de demanda ---------------------------------------------------------------------

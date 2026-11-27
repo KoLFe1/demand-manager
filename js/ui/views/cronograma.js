@@ -23,6 +23,7 @@ import { handleError, notify } from '../shared/entity.js';
 import { button, segmented, switchInput } from '../kit/controls.js';
 import { emptyState } from '../kit/display.js';
 import { pickFromList } from '../kit/pickers.js';
+import { openScheduleDialog } from '../schedule.js';
 
 const ROW_H = 32;
 const HEAD_H = 44;
@@ -183,7 +184,12 @@ export default {
       ? h(
           'section',
           { class: 'v-crono-undated', 'aria-label': 'Sem datas' },
-          h('h3', { class: 'v-crono-undated-title' }, 'Sem datas ', h('span', { class: 'v-crono-count' }, String(model.undated.length))),
+          h(
+            'div',
+            { class: 'v-crono-undated-head' },
+            h('h3', { class: 'v-crono-undated-title' }, 'Sem datas ', h('span', { class: 'v-crono-count' }, String(model.undated.length))),
+            scheduleButton(app, model.undated),
+          ),
           h(
             'ul',
             { class: 'v-crono-undated-list' },
@@ -214,6 +220,42 @@ export default {
     );
   },
 };
+
+/** Demandas abertas que têm itens na lista "Sem datas" (a própria demanda ou tarefas dela), na ordem da lista. */
+function undatedDemands(app, undated) {
+  const seen = new Map();
+  for (const item of undated) {
+    const demand = item.type === 'demand' ? item.entity : app.sel.demandOf(item.entity);
+    if (demand && !seen.has(demand.id) && app.sel.isOpen(demand)) seen.set(demand.id, demand);
+  }
+  return [...seen.values()];
+}
+
+/** "Agendar datas vazias…" no cabeçalho de "Sem datas": abre direto com uma demanda, senão pergunta qual. */
+function scheduleButton(app, undated) {
+  const demands = undatedDemands(app, undated);
+  if (!demands.length) return null;
+  return button({
+    label: 'Agendar datas vazias…',
+    icon: 'calendar',
+    size: 'sm',
+    variant: 'ghost',
+    class: 'v-crono-schedule',
+    attrs: { 'data-action': 'schedule-empty' },
+    onclick: async (ev) => {
+      let id = demands.length === 1 ? demands[0].id : null;
+      if (!id) {
+        id = await pickFromList(ev.currentTarget, {
+          items: demands.map((d) => ({ id: d.id, label: d.name, hint: app.sel.code('demand', d) })),
+          placeholder: 'Buscar demanda…',
+          title: 'Agendar qual demanda?',
+          width: 320,
+        });
+      }
+      if (id) openScheduleDialog(app, id);
+    },
+  });
+}
 
 /** Legenda das formas do cronograma. */
 function renderLegend() {

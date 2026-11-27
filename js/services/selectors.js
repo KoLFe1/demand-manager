@@ -32,6 +32,7 @@ import { isCancelled, isClosed, isOpen, resolveStatuses, statusById } from '../d
 import { indexEvents } from '../domain/timeline.js';
 import { compareLinks } from '../domain/links.js';
 import { availableTemplates, templatesFromSettings } from '../domain/templates.js';
+import { planEmptyDates } from '../domain/schedule.js';
 import { collectPeople, daysSince, followUpInfo, isFollowUpDue, isOtherOwner, lastFollowUp, personKey, personName, waitingSince } from '../domain/followup.js';
 import { TIMER, activeTimers, elapsedSeconds, summarize, timerState, totalsByTask } from '../domain/timetracking.js';
 import { activeWeekItems, planLoad, weekSections, weekSummary } from '../domain/weekplan.js';
@@ -950,6 +951,20 @@ export function createSelectors(app) {
         }
         return Object.freeze([...byKey.values()].sort(NAME_COLLATOR.compare));
       });
+    },
+
+    /**
+     * Prévia do "Agendar datas vazias" de uma demanda (domain/schedule.js); `cmd.scheduleEmptyDates` aplica.
+     * @param {string} demandId
+     * @param {string} startDate 'YYYY-MM-DD'
+     * @returns {object|null} plano (null se a demanda não existe ou a data é inválida)
+     */
+    schedulePlan(demandId, startDate) {
+      const demand = liveRow('demands', demandId);
+      if (!demand || !isValidDateStr(startDate)) return null;
+      return memo(`schedulePlan|${demandId}|${startDate}`, () =>
+        planEmptyDates({ demand, tasks: sel.allTasksOfDemand(demandId), tasksById: struct().tasksById, graph: graph(), statuses: statuses(), startDate, hoursPerDay: hoursPerDay() }),
+      );
     },
 
     /**

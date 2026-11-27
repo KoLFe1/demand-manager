@@ -333,18 +333,19 @@ const PEOPLE_CHIPS_MAX = 8;
  * Atalhos com as pessoas conhecidas (sel.people()) para preencher "Aguardando quem?" num clique.
  * @param {object} app
  * @param {(name: string) => void} onpick
+ * @param {{ titlePrefix?: string, class?: string }} [options] titlePrefix = início da dica de cada atalho ('Aguardando')
  * @returns {HTMLElement|null} null quando ainda não há pessoas conhecidas
  */
-export function peopleChips(app, onpick) {
+export function peopleChips(app, onpick, { titlePrefix = 'Aguardando', class: className } = {}) {
   const people = typeof app.sel.people === 'function' ? app.sel.people().slice(0, PEOPLE_CHIPS_MAX) : [];
   if (!people.length) return null;
   return h(
     'div',
-    { class: 'en-people', role: 'group', 'aria-label': 'Pessoas conhecidas' },
+    { class: cx('en-people', className), role: 'group', 'aria-label': 'Pessoas conhecidas' },
     people.map((person) =>
       h(
         'button',
-        { type: 'button', class: 'en-person-chip', key: person.key, title: `Aguardando ${person.name}`, onclick: () => onpick(person.name) },
+        { type: 'button', class: 'en-person-chip', key: person.key, 'data-person': person.name, title: `${titlePrefix} ${person.name}`, onclick: () => onpick(person.name) },
         avatar(person.name, { size: 16 }),
         h('span', null, person.name),
       ),

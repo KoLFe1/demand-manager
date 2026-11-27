@@ -7,12 +7,13 @@
 
 import { cx, h } from '../core/dom.js';
 import { formatDate } from '../core/dates.js';
-import { iconButton, segmented, switchInput, textArea, textInput } from './kit/controls.js';
-import { priorityBadge } from './kit/display.js';
+import { button, iconButton, segmented, switchInput, textArea, textInput } from './kit/controls.js';
+import { avatar, priorityBadge } from './kit/display.js';
 import { icon } from './kit/icons.js';
-import { openModal } from './kit/overlays.js';
+import { openModal, openPopover } from './kit/overlays.js';
 import { EMPTY_CHOICE, pickDate, pickFromList, pickPriority } from './kit/pickers.js';
-import { handleError, notify, projectDot, surfaceOutcome } from './shared/entity.js';
+import { normalizeText } from '../domain/filters.js';
+import { handleError, notify, peopleChips, projectDot, surfaceOutcome } from './shared/entity.js';
 
 const TYPES = Object.freeze([
   { value: 'task', label: 'Tarefa', icon: 'check-circle', title: 'Nova tarefa' },
@@ -77,6 +78,14 @@ function warnOutOfScope(app, type, row) {
   });
 }
 
+/** Responsável inicial: o informado em `defaults.owner` (null = sem) ou a configuração 'owner.default'. */
+function initialOwner(app, d) {
+  if (d.owner === null) return null;
+  if (typeof d.owner === 'string') return d.owner.trim() || null;
+  const fallback = app.settings && typeof app.settings.get === 'function' ? app.settings.get('owner.default') : null;
+  return typeof fallback === 'string' && fallback.trim() ? fallback.trim() : null;
+}
+
 /** Valores iniciais do formulário a partir de `defaults` e do contexto da casca. */
 function initialForm(app, type, defaults) {
   const d = defaults && typeof defaults === 'object' ? defaults : {};
@@ -94,6 +103,7 @@ function initialForm(app, type, defaults) {
     project_id: app.sel.project(projectId) ? projectId : null,
     priority: typeof d.priority === 'string' ? d.priority : 'P3',
     due_date: typeof d.due_date === 'string' ? d.due_date : null,
+    owner: initialOwner(app, d),
     status: typeof d.status === 'string' ? d.status : undefined,
     code: '',
     color: 'blue',
@@ -117,7 +127,8 @@ function chipButton({ glyph, text, onclick, title, empty, disabled, className })
  * @param {object} app
  * @param {'task'|'demand'|'project'} type tipo inicial (o usuário pode trocar no diálogo)
  * @param {{ demand_id?: string, parent_id?: string, project_id?: string, status?: string, due_date?: string,
- *           priority?: string, name?: string, description?: string }} [defaults] `description` (texto) mostra
+ *           priority?: string, name?: string, description?: string, owner?: string|null }} [defaults] `owner`
+ *        (padrão: configuração 'owner.default'; null = sem responsável); `description` (texto) mostra
  *        o campo Descrição já preenchido (captura rápida) e é gravado ao criar. valores iniciais. Sem demand_id, usa a demanda aberta no
  *        painel; sem project_id, o projeto do filtro global (app.ui.scope.projectId).
  * @returns {Promise<object|null>} a (última) entidade criada, ou null se o usuário cancelou sem criar
@@ -161,11 +172,12 @@ export function openQuickCreate(app, type = 'task', defaults = {}) {
             demand_id: parent ? undefined : form.demand_id || null,
             priority: form.priority,
             due_date: form.due_date || null,
+            owner: form.owner || null,
             status: form.status,
             description,
           });
         } else if (form.type === 'demand') {
-          row = app.cmd.createDemand({ name, project_id: form.project_id || null, priority: form.priority, due_date: form.due_date || null, status: form.status, description });
+          row = app.cmd.createDemand({ name, project_id: form.project_id || null, priority: form.priority, due_date: form.due_date || null, owner: form.owner || null, status: form.status, description });
         } else {
           row = app.cmd.createProject({ name, code: form.code.trim() || null, color: form.color, description });
         }
@@ -263,6 +275,56 @@ export function openQuickCreate(app, type = 'task', defaults = {}) {
       focusName();
     };
 
+    /** "Responsável": popover com campo de texto e atalhos das pessoas conhecidas (filtrados pelo que se digita). */
+    const pickOwner = (ev) => {
+      let text = form.owner || '';
+      const done = (close, value) => {
+        form.owner = typeof value === 'string' && value.trim() ? value.trim() : null;
+        close('save');
+        refresh();
+        focusName();
+      };
+      const filterChips = (root, value) => {
+        const q = normalizeText(value || '');
+        for (const chip of root.querySelectorAll('.en-person-chip')) chip.hidden = !!q && !normalizeText(chip.dataset.person || '').includes(q);
+      };
+      openPopover(
+        ev.currentTarget,
+        (close) =>
+          h(
+            'form',
+            {
+              class: 'qc-owner-form',
+              onsubmit: (e) => {
+                e.preventDefault();
+                done(close, text);
+              },
+            },
+            textInput({
+              value: text,
+              autofocus: true,
+              placeholder: 'Nome do responsável',
+              ariaLabel: 'Responsável',
+              maxlength: 120,
+              class: 'qc-owner-input',
+              oninput: (value, e) => {
+                text = value;
+                const root = e && e.target ? e.target.closest('.qc-owner-form') : null;
+                if (root) filterChips(root, value);
+              },
+            }),
+            peopleChips(app, (name) => done(close, name), { titlePrefix: 'Responsável:', class: 'qc-owner-people' }),
+            h(
+              'div',
+              { class: 'en-reason-actions' },
+              button({ label: 'Sem responsável', size: 'sm', variant: 'ghost', onclick: () => done(close, null) }),
+              button({ label: 'OK', size: 'sm', variant: 'primary', type: 'submit' }),
+            ),
+          ),
+        { class: 'qc-owner-popover', ariaLabel: 'Responsável', width: 300 },
+      );
+    };
+
     const fieldsFor = () => {
       const today = app.clock.today();
       const dueChip = chipButton({
@@ -272,6 +334,14 @@ export function openQuickCreate(app, type = 'task', defaults = {}) {
         title: 'Prazo',
         onclick: chooseDate,
         className: 'qc-due',
+      });
+      const ownerChip = chipButton({
+        glyph: form.owner ? avatar(form.owner, { size: 16 }) : icon('user', { size: 14 }),
+        text: form.owner || 'Responsável',
+        empty: !form.owner,
+        title: form.owner ? `Responsável: ${form.owner}` : 'Responsável (opcional)',
+        onclick: pickOwner,
+        className: 'qc-owner',
       });
       const priorityChip = h(
         'span',
@@ -302,6 +372,7 @@ export function openQuickCreate(app, type = 'task', defaults = {}) {
             : chipButton({ glyph: icon('layers', { size: 14 }), text: demand ? demand.name : 'Sem demanda', empty: !demand, title: 'Demanda', onclick: pickDemand, className: 'qc-demand' }),
           priorityChip,
           dueChip,
+          ownerChip,
         ];
       }
       if (form.type === 'demand') {
@@ -310,6 +381,7 @@ export function openQuickCreate(app, type = 'task', defaults = {}) {
           chipButton({ glyph: projectDot(project), text: project ? project.name : 'Sem projeto', empty: !project, title: 'Projeto', onclick: pickProject, className: 'qc-project' }),
           priorityChip,
           dueChip,
+          ownerChip,
         ];
       }
       return [

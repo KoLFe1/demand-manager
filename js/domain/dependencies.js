@@ -644,7 +644,7 @@ export function openDownstream(taskId, ctx = {}) {
 // ---------------------------------------------------------------------------
 
 /** Dias úteis necessários para a estimativa (sem estimativa → 1 dia). */
-function workdaysFor(estimateMinutes, hoursPerDay) {
+export function workdaysFor(estimateMinutes, hoursPerDay) {
   const minutes = Number(estimateMinutes);
   if (!Number.isFinite(minutes) || minutes <= 0) return 1;
   return Math.max(1, Math.ceil(minutes / (60 * hoursPerDay) - 1e-9));

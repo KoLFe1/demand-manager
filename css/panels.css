@@ -827,7 +827,8 @@ button.en-title:focus-visible {
 }
 
 /* ---------- popover do impedimento */
-.en-reason {
+.en-reason,
+.qc-owner-form {
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
@@ -2305,6 +2306,111 @@ button.qc-chip:hover {
   display: inline-flex;
   width: 12px;
   color: var(--text-faint);
+}
+
+/* Diálogo "Agendar datas vazias" (js/ui/schedule.js) */
+.sch-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.sch-intro,
+.sch-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.sch-preview {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-subtle);
+  max-height: 320px;
+  overflow: auto;
+}
+
+.sch-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.sch-demand {
+  color: var(--text);
+}
+
+.sch-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--warning-soft);
+  color: var(--text);
+  font-size: var(--fs-sm);
+}
+
+.sch-warning > .icon {
+  flex-shrink: 0;
+  color: var(--warning);
+}
+
+.sch-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.sch-table th {
+  padding: var(--sp-1) var(--sp-3);
+  color: var(--text-faint);
+  font-weight: 500;
+  text-align: left;
+}
+
+.sch-table td {
+  padding: var(--sp-1) var(--sp-3);
+  border-top: 1px solid var(--border);
+}
+
+.sch-name {
+  overflow-wrap: anywhere;
+}
+
+.sch-row.is-sub .sch-name {
+  padding-left: var(--sp-6);
+  color: var(--text-muted);
+}
+
+.sch-date {
+  white-space: nowrap;
+}
+
+.sch-row.is-kept,
+.sch-row.is-empty {
+  color: var(--text-muted);
+}
+
+.sch-state {
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.sch-row.is-new .sch-state {
+  color: var(--success);
+}
+
+.sch-row.is-over .sch-date:nth-child(3),
+.sch-over {
+  color: var(--danger);
+  font-weight: 600;
 }
 
 /* Diálogo "Exportar prazos (.ics)" (js/ui/ics-export.js) */
