@@ -1444,6 +1444,7 @@ a.pn-lk-label:hover {
 @media (max-width: 600px) {
   .pn-lk {
     flex-wrap: wrap;
+    padding-right: var(--sp-3); /* folga à direita: a reticência do endereço não encosta na borda */
   }
 
   .pn-lk-main {

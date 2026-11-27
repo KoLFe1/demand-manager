@@ -10,7 +10,7 @@
 // Dados: app.sel.statusReport({ range, projectId }) (memorizado). Estado da tela: { preset, from, to, projectId }.
 
 import { cx, h } from '../../core/dom.js';
-import { formatDate } from '../../core/dates.js';
+import { formatDate, formatDateTime } from '../../core/dates.js';
 import { safeHref } from '../../core/safeurl.js';
 import { DEFAULT_REPORT_PRESET, REPORT_PRESETS, REPORT_SECTIONS, presetRange, reportToText } from '../../domain/report.js';
 import { copyToClipboard } from '../kit/clipboard.js';
@@ -241,6 +241,13 @@ export default {
     const doc = h(
       'article',
       { class: 'v-rel-doc', 'aria-label': 'Relatório de status' },
+      // Cabeçalho só de impressão (oculto na tela): título, período e data/hora de geração.
+      h(
+        'p',
+        { class: 'v-rel-print-head', 'aria-hidden': 'true' },
+        h('span', null, 'Demand Manager · Relatório de status'),
+        h('span', null, `${report.label}${report.projectName ? ` · ${report.projectName}` : ''} · gerado em ${formatDateTime(app.clock.nowIso())}`),
+      ),
       h(
         'header',
         { class: 'v-rel-head' },

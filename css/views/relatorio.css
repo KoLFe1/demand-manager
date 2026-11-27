@@ -194,6 +194,11 @@
   margin-top: var(--sp-5);
 }
 
+/* cabeçalho de impressão: oculto na tela (a tela já mostra título/período no .v-rel-head) */
+.v-rel-print-head {
+  display: none;
+}
+
 /* --- impressão: só com o relatório montado ------------------------------------------------------------ */
 /* Exceção à regra "só tokens": no papel o relatório sai sempre preto sobre branco, mesmo com o tema escuro
  * ativo na tela (os tokens do tema escuro imprimiriam texto claro). Por isso aqui — e só aqui — usamos
@@ -204,6 +209,7 @@
     height: auto !important;
     overflow: visible !important;
     background: #fff !important;
+    color-scheme: light !important; /* senão as margens da página saem escuras com o tema escuro */
   }
 
   body:has(.v-relatorio) .shell-sidebar,
@@ -254,15 +260,65 @@
     border-color: color-mix(in srgb, #000 40%, #fff); /* cinza de impressão (= #999), feito de preto/branco */
   }
 
+  .v-rel-title,
   .v-rel-project-title,
   .v-rel-section-title {
     break-after: avoid;
     page-break-after: avoid;
   }
 
+  /* cada projeto e cada grupo (seção) inteiro numa página quando couber; itens nunca partidos */
+  .v-rel-project,
+  .v-rel-section,
   .v-rel-item,
   .v-rel-head {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+
+  .v-rel-project {
+    margin-top: 6mm;
+  }
+
+  /* links saem como texto comum (sem sublinhado nem URL) */
+  .v-rel-doc a,
+  .v-rel-doc a:hover .v-rel-name {
+    color: #000 !important;
+    text-decoration: none !important;
+  }
+
+  .v-rel-doc a[href]::after {
+    content: none !important;
+  }
+
+  .v-rel-print-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 2mm 6mm;
+    margin: 0 0 4mm;
+    padding-bottom: 2mm;
+    border-bottom: 0.5pt solid color-mix(in srgb, #000 40%, #fff);
+    font-size: 8pt;
+  }
+
+  .v-rel-print-head span {
+    color: color-mix(in srgb, #000 70%, #fff) !important; /* cinza escuro legível (= #4d4d4d) */
+  }
+
+  /* página nomeada: margens só para o relatório (as outras telas mantêm o padrão do navegador) e
+   * numeração onde o navegador suporta caixas de margem */
+  body:has(.v-relatorio) .v-relatorio {
+    page: relatorio;
+  }
+
+  @page relatorio {
+    margin: 16mm 14mm 18mm;
+
+    @bottom-right {
+      content: counter(page) ' / ' counter(pages);
+      font-size: 8pt;
+      color: color-mix(in srgb, #000 70%, #fff);
+    }
   }
 }
