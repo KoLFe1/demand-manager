@@ -195,6 +195,9 @@
 }
 
 /* --- impressão: só com o relatório montado ------------------------------------------------------------ */
+/* Exceção à regra "só tokens": no papel o relatório sai sempre preto sobre branco, mesmo com o tema escuro
+ * ativo na tela (os tokens do tema escuro imprimiriam texto claro). Por isso aqui — e só aqui — usamos
+ * preto/branco literais. */
 @media print {
   html:has(.v-relatorio),
   body:has(.v-relatorio) {
@@ -248,7 +251,7 @@
 
   .v-rel-head,
   .v-rel-project-title {
-    border-color: #999;
+    border-color: color-mix(in srgb, #000 40%, #fff); /* cinza de impressão (= #999), feito de preto/branco */
   }
 
   .v-rel-project-title,
