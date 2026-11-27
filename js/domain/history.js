@@ -601,7 +601,7 @@ function describeUnknown(event, c) {
  * 'Prazo alterado: 12 nov → 20 nov' · 'Prazo removido (era 12 nov)' · 'Prioridade: P3 Média → P1 Crítica' ·
  * 'Descrição alterada' (detail = trecho do texto anterior) · 'Dependência adicionada: “X”' · 'Arquivada' ·
  * 'Movida para a demanda “X”' · 'Observação adicionada' · 'Tempo registrado: 1h 30min' ·
- * 'Adicionada à semana de 16–22 nov' · 'Responsável: Ana → Pedro' · 'Estimativa: 2h → 4h'.
+ * 'Adicionada à semana de 16–22 nov' · 'Responsável: Ana → Bruno' · 'Estimativa: 2h → 4h'.
  * Eventos de projeto usam o masculino ('Criado', 'Arquivado'). Ações desconhecidas também viram uma frase.
  */
 export function describeEvent(event, ctx = {}) {

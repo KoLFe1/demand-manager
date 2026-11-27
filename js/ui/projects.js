@@ -75,7 +75,7 @@ export function openProjectDialog(app, projectId = null, defaults = {}) {
   let error = '';
   let dialog = null;
   let result = null;
-  // Links e arquivos (só ao editar: o projeto precisa existir). Ex.: pasta-raiz \servidor\Projetos\Palito.
+  // Links e arquivos (só ao editar: o projeto precisa existir). Ex.: pasta-raiz \servidor\Projetos\Alfa.
   const linkState = { linkError: null };
   const linkCtx = {
     state: linkState,

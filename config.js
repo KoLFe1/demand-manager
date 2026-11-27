@@ -1,7 +1,7 @@
 // Demand Manager — configuração opcional da sincronização (Supabase).
 //
-// Este arquivo é um MODELO: do jeito que está, não define nada e o aplicativo funciona em modo local
-// (os dados ficam só neste dispositivo).
+// Este arquivo traz a configuração do projeto Supabase deste app publicado (URL + chave PÚBLICA): todo aparelho
+// que abrir o site já mostra "Entrar". Sem o bloco window.DM_CONFIG, o app funciona só em modo local.
 //
 // Há duas formas de ligar a sincronização entre dispositivos:
 //
