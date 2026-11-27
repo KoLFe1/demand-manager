@@ -13,10 +13,13 @@ const NONE = '__none__';
 const hasId = (id) => id !== null && id !== undefined && id !== '';
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
-/** Endereço do app sem o hash (base dos links dos eventos). */
-function appUrlOf() {
+/**
+ * Endereço do app (base dos links dos eventos): origem + caminho, sem consulta nem hash — parâmetros de
+ * desenvolvimento (?db=, ?demo=1) ou de captura não podem ir parar no calendário de outra pessoa/aparelho.
+ */
+export function appUrlOf(loc = window.location) {
   try {
-    return String(window.location.href).split('#')[0];
+    return `${loc.origin}${loc.pathname}`;
   } catch {
     return '';
   }

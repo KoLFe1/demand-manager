@@ -120,8 +120,11 @@ export function createSelectors(app) {
 
   // --- relógio e configurações ------------------------------------------------------------------
   const today = () => app.clock.today();
-  const nowIso = () => app.clock.nowIso();
-  const nowMs = () => app.clock.now().getTime();
+  // peek(): os seletores leem a hora para chaves de cache e cálculos memorizados — não é "mostrar a hora"
+  // (a casca só redesenha no tique quem leu app.clock.now() direto no desenho).
+  const peekNow = () => (typeof app.clock.peek === 'function' ? app.clock.peek() : app.clock.now());
+  const nowIso = () => peekNow().toISOString();
+  const nowMs = () => peekNow().getTime();
   const setting = (key) => app.settings.get(key);
   const soonDays = () => {
     const n = Number(setting('deadline.soonDays'));

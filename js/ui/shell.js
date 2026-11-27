@@ -305,6 +305,21 @@ export function startShell(app, root) {
   let focused = null;
   let lastPath = null;
   let pushedPanelRoute = null;
+  // closePanel() pode fechar com history.back(), que só chega depois (popstate assíncrono). Uma navegação pedida
+  // nesse intervalo seria desfeita pelo "voltar" atrasado: ela espera numa fila e roda quando ele chegar.
+  let pendingBack = null; // { timer, queue: Function[] }
+  function afterPendingBack(fn) {
+    if (!pendingBack) return fn();
+    pendingBack.queue.push(fn);
+    return true;
+  }
+  function settlePendingBack() {
+    if (!pendingBack) return;
+    const { timer, queue } = pendingBack;
+    pendingBack = null;
+    win.clearTimeout(timer);
+    for (const fn of queue) safeCall(fn);
+  }
   let syncPopover = null;
   const viewStates = new Map();
   let panelState = { key: null, state: {} };
@@ -1027,20 +1042,49 @@ export function startShell(app, root) {
         viewRendering = true;
         viewReadPanel = false;
         try {
-          viewMount.update();
+          viewReadClock = probeClock(() => viewMount.update());
         } finally {
           viewRendering = false;
         }
       }
       if (todo.panel && panelMount) {
         renders.panel += 1;
-        panelMount.update();
+        panelReadClock = probeClock(() => panelMount.update());
       }
     } finally {
       flushing = false;
     }
     if (dirty.shell || dirty.view || dirty.panel) schedule({});
     afterRender();
+  }
+
+  // ----- leitura do relógio durante o desenho ------------------------------------------------------
+  // O tique de 1 min só redesenha tela/painel quando o tempo os afeta. Além de cronômetro e virada do dia,
+  // conta quem LEU a hora (app.clock.now/nowIso/nowMs) no último desenho: textos "há N min", a linha do
+  // "agora" no calendário, a saudação por hora... `today()`/`peek()` (dia, chaves de cache) não contam.
+  let clockProbe = null;
+  let viewReadClock = false;
+  let panelReadClock = false;
+  const clockObj = app.clock;
+  const clockOrig = clockObj && typeof clockObj.now === 'function' && !Object.isFrozen(clockObj) ? { now: clockObj.now } : null;
+  if (clockOrig) {
+    clockObj.now = () => {
+      if (clockProbe) clockProbe.read = true;
+      return clockOrig.now();
+    };
+  }
+
+  /** Executa `fn` registrando se ele leu a hora; devolve true se leu. */
+  function probeClock(fn) {
+    const probe = { read: false };
+    const prev = clockProbe;
+    clockProbe = probe;
+    try {
+      fn();
+    } finally {
+      clockProbe = prev;
+    }
+    return probe.read;
   }
 
   function hasRunningTimer() {
@@ -1091,7 +1135,8 @@ export function startShell(app, root) {
       if (target && target[0] !== '/') target = `/${target}`;
       if (!target || !viewByPath(target)) target = DEFAULT_PATH;
       closeDrawer();
-      return router.navigate(target, { params: { ...extra, ...(params && typeof params === 'object' ? params : {}) } });
+      const merged = { ...extra, ...(params && typeof params === 'object' ? params : {}) };
+      return afterPendingBack(() => router.navigate(target, { params: merged }));
     },
 
     /** @returns {{ path: string, params: Record<string, string> }} rota atual (cópia) */
@@ -1114,6 +1159,7 @@ export function startShell(app, root) {
      */
     openPanel(type, id, opts = {}) {
       if (!PANEL_TYPES.has(type) || typeof id !== 'string' || !id) return false;
+      if (pendingBack) return afterPendingBack(() => ui.openPanel(type, id, opts));
       const options = opts && typeof opts === 'object' ? opts : {};
       const initial = {
         ...(options.state && typeof options.state === 'object' ? options.state : {}),
@@ -1146,11 +1192,16 @@ export function startShell(app, root) {
       pushedPanelRoute = null;
       if (pushed && pushed.path === r.path && pushed.panel === r.params.panel && win.history.length > 1) {
         const before = win.location.href;
+        settlePendingBack();
         win.history.back();
         // Se o histórico não voltou (entrada externa), garante o fechamento trocando a URL.
-        win.setTimeout(() => {
-          if (win.location.href === before && router.current().params.panel) router.setParams({ panel: null }, { replace: true });
-        }, 400);
+        pendingBack = {
+          queue: [],
+          timer: win.setTimeout(() => {
+            if (win.location.href === before && router.current().params.panel) router.setParams({ panel: null }, { replace: true });
+            settlePendingBack();
+          }, 400),
+        };
         return true;
       }
       return router.setParams({ panel: null }, { replace: true });
@@ -1274,6 +1325,8 @@ export function startShell(app, root) {
     destroy() {
       for (const fn of cleanups.splice(0)) safeCall(fn);
       destroyed = true;
+      if (pendingBack) win.clearTimeout(pendingBack.timer);
+      pendingBack = null;
       if (frame !== 0) win.cancelAnimationFrame(frame);
       if (fallback !== 0) win.clearTimeout(fallback);
       if (viewMount) viewMount.destroy();
@@ -1463,14 +1516,22 @@ export function startShell(app, root) {
   }
 
   let lastDay = dayKey();
-  const minuteTimer = win.setInterval(() => {
-    // A tela e o painel só redesenham se o tempo os afeta: cronômetro rodando ou virada do dia.
+  function minuteTick() {
+    // A tela e o painel só redesenham se o tempo os afeta: cronômetro rodando, virada do dia ou hora lida no
+    // último desenho (textos relativos "há N min", linha do agora…).
     const day = dayKey();
     const timeMatters = hasRunningTimer() || day !== lastDay;
     lastDay = day;
-    schedule({ shell: true, view: timeMatters, panel: timeMatters });
+    schedule({ shell: true, view: timeMatters || viewReadClock, panel: timeMatters || panelReadClock });
     checkDailyDigest(app); // app aberto de um dia para o outro
-  }, 60000);
+  }
+  ui.__minuteTick = minuteTick; // testes
+  const minuteTimer = win.setInterval(minuteTick, 60000);
+  if (clockOrig) {
+    cleanups.push(() => {
+      clockObj.now = clockOrig.now;
+    });
+  }
   // "Resumo do dia": logo depois do primeiro desenho e quando o app volta a ficar visível (celular).
   const digestTimer = win.setTimeout(() => checkDailyDigest(app), 700);
   const onVisible = () => {
@@ -1483,6 +1544,8 @@ export function startShell(app, root) {
 
   // ----- rota ---------------------------------------------------------------------------------------
   router.subscribe((next, prev) => {
+    // o "voltar" do closePanel chegou: roda as navegações que esperavam por ele (no próximo tique, fora do aviso)
+    if (pendingBack && !next.params.panel) win.setTimeout(settlePendingBack, 0);
     if (!viewByPath(next.path)) {
       router.navigate(DEFAULT_PATH, { params: next.params, replace: true });
       return;

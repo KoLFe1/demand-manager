@@ -19,12 +19,17 @@ export function createWallClock(realNow = () => new Date()) {
   const clock = {
     /** Date atual (real ou congelado). Função solta: pode ser passada como callback. */
     now: () => (frozen === null ? realNow() : new Date(frozen)),
+    /**
+     * Igual a now(), mas sem contar como "leitura da hora" para a casca (que pode trocar `now` por uma versão
+     * que registra quem leu, para o tique de 1 min redesenhar só quem mostra hora). Use em chaves de cache.
+     */
+    peek: () => (frozen === null ? realNow() : new Date(frozen)),
     /** Instante atual em ISO UTC. */
     nowIso: () => clock.now().toISOString(),
     /** Milissegundos desde 1970. */
     nowMs: () => clock.now().getTime(),
     /** Data local de hoje, 'YYYY-MM-DD'. */
-    today: () => toDateStr(clock.now()),
+    today: () => toDateStr(clock.peek()),
     /** Congela o relógio num instante (Date, ISO, ou 'YYYY-MM-DDTHH:MM' local). */
     travelTo(when) {
       const d = when instanceof Date ? when : new Date(when);

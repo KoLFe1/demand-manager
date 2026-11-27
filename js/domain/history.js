@@ -518,6 +518,11 @@ function describeNote(event) {
 function describeLink(event, added) {
   const meta = metaOf(event);
   const label = excerpt(meta.label, 80) || null;
+  if (event.action === ACTIONS.LINK_UPDATED) {
+    const old = excerpt(meta.old_label, 80) || null;
+    const detail = old && old !== label ? `${old} → ${label || '—'}` : label;
+    return entry('link', meta.target_changed ? 'Link alterado (novo endereço)' : 'Link renomeado', detail);
+  }
   if (!added) return entry('unlink', 'Link removido', label, 'muted');
   return entry('link', meta.restored ? 'Link restaurado' : 'Link adicionado', label);
 }
@@ -654,6 +659,8 @@ export function describeEvent(event, ctx = {}) {
       return describeLink(event, true);
     case ACTIONS.LINK_REMOVED:
       return describeLink(event, false);
+    case ACTIONS.LINK_UPDATED:
+      return describeLink(event, true);
     default:
       return describeUnknown(event, c);
   }

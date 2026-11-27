@@ -25,6 +25,7 @@
 //                      meta: { person, note?, next_date, role: 'waiting'|'owner' }
 //   link_added         new_value: id do link; meta: { label, kind, restored? } (restored = "Desfazer" da remoção)
 //   link_removed       old_value: id do link; meta: { label, kind }
+//   link_updated       new_value: id do link; meta: { label, kind, old_label?, target_changed? }
 //   deleted (projeto)  meta: { demand_ids } — demandas que a exclusão deixou sem projeto (restoreProject)
 
 import { categoryOf } from './statuses.js';
@@ -52,6 +53,7 @@ export const ACTIONS = Object.freeze({
   FOLLOW_UP: 'followed_up',
   LINK_ADDED: 'link_added',
   LINK_REMOVED: 'link_removed',
+  LINK_UPDATED: 'link_updated',
 });
 
 /** Monta os valores de um evento (o id é gerado pelo banco local ao inserir). */

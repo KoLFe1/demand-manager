@@ -1933,7 +1933,13 @@ export function createCommands(app) {
       if (res.target !== link.target) out.target = res.target;
       if (res.kind !== link.kind) out.kind = res.kind;
       if (name !== link.label) out.label = name;
-      return Object.keys(out).length ? store.update('links', linkId, out) : link;
+      if (!Object.keys(out).length) return link;
+      const row = store.update('links', linkId, out);
+      event(link.entity_type, link.entity_id, ACTIONS.LINK_UPDATED, {
+        newValue: link.id,
+        meta: { label: row.label, kind: row.kind, old_label: out.label !== undefined ? link.label : undefined, target_changed: out.target !== undefined ? true : undefined },
+      });
+      return row;
     }),
 
     /**

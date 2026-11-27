@@ -1039,6 +1039,12 @@
   order: 1;
 }
 
+/* .ics no celular: depois da navegação e do título (fim da 1ª linha), não antes da seta "anterior" */
+.v-calendario.is-phone .v-calendario-ics {
+  order: 2;
+  flex-shrink: 0;
+}
+
 .v-calendario.is-phone .v-calendario-bar-spacer {
   display: none;
 }
