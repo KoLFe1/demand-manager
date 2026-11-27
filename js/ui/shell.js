@@ -770,7 +770,7 @@ export function startShell(app, root) {
         'div',
         { class: 'shell-brand' },
         h('img', { class: 'shell-logo', src: 'assets/icon.svg', width: 22, height: 22, alt: '' }),
-        h('span', { class: 'shell-brand-name truncate' }, 'Demand Manager'),
+        h('span', { class: 'shell-brand-name truncate' }, 'Demand Manager', app.env && app.env.version ? h('span', { class: 'shell-brand-version', 'data-app-version': app.env.version }, ` ${app.env.version}`) : null),
         mobile
           ? iconButton({ icon: 'x', title: 'Fechar menu', size: 'sm', class: 'shell-brand-toggle', onclick: closeDrawer })
           : iconButton({ icon: collapsed ? 'chevron-right' : 'chevron-left', title: collapsed ? 'Expandir a barra lateral' : 'Recolher a barra lateral', size: 'sm', class: 'shell-brand-toggle', onclick: toggleCollapsed, attrs: { 'data-action': 'toggle-sidebar' } }),

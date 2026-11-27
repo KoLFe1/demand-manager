@@ -202,6 +202,14 @@ body {
   letter-spacing: -0.01em;
 }
 
+.shell-brand-version {
+  margin-left: 2px;
+  font-size: var(--fs-xs, 11px);
+  font-weight: var(--fw-medium, 500);
+  color: var(--text-faint);
+  letter-spacing: 0;
+}
+
 .shell-brand-toggle {
   color: var(--text-faint);
 }
