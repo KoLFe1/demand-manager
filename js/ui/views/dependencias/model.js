@@ -34,7 +34,7 @@ export function normalizeDemandFilter(app, value) {
   return DEMAND_ALL;
 }
 
-let cache = { key: null, value: null };
+let cache = { app: null, key: null, value: null }; // por app: a versão do banco recomeça em outro app/banco
 
 /**
  * Monta (ou devolve do cache) o modelo da tela.
@@ -45,9 +45,9 @@ let cache = { key: null, value: null };
 export function buildModel(app, filters) {
   const { demandId, hideDone, showIsolated, projectId, forceId = null } = filters;
   const key = [app.store.version(), app.clock.today(), demandId || '', hideDone ? 1 : 0, showIsolated ? 1 : 0, projectId || '', forceId || ''].join('|');
-  if (cache.key === key) return cache.value;
+  if (cache.app === app && cache.key === key) return cache.value;
   const value = computeModel(app, { demandId, hideDone, showIsolated, projectId, forceId });
-  cache = { key, value };
+  cache = { app, key, value };
   return value;
 }
 

@@ -11,6 +11,8 @@
 //   other     o resto (texto livre, outros esquemas)                   → copiar
 // Esquemas perigosos (javascript:, data:, vbscript:) e alvo vazio são recusados.
 
+import { safeHref } from '../core/safeurl.js';
+
 export const LINK_KIND = Object.freeze({
   UNC: 'unc',
   DRIVE: 'drive',
@@ -188,7 +190,7 @@ export function linkInfo(link) {
     kind,
     openMode,
     label: custom || (res.ok ? res.label : target) || 'Link',
-    href: res.ok && openMode === OPEN_MODE.OPEN ? res.target : null,
+    href: res.ok && openMode === OPEN_MODE.OPEN ? safeHref(res.target) : null, // lista de esquemas permitidos (core/safeurl.js)
     copyText: res.ok ? copyTextOf(res.target, kind) : target,
     icon: meta.icon,
     kindLabel: meta.label,

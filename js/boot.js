@@ -134,7 +134,8 @@ export function captureUrl(origin, pathname) {
  * @returns {string} 'javascript:…'
  */
 export function bookmarkletCode(appUrl) {
-  const base = JSON.stringify(String(appUrl));
+  // javascript: é decodificado (%xx) antes de rodar: '%' no endereço vira %25 para não fechar a string.
+  const base = JSON.stringify(String(appUrl)).replace(/%/g, '%25');
   return (
     'javascript:(function(){var e=encodeURIComponent,s=String(window.getSelection?getSelection():"").trim().slice(0,3000);' +
     `window.open(${base}+"?capture=1&title="+e(document.title.slice(0,300))+"&text="+e(s)+"&url="+e(location.href),"_blank");})();`

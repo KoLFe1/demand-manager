@@ -11,6 +11,7 @@
 
 import { cx, h } from '../../core/dom.js';
 import { formatDate } from '../../core/dates.js';
+import { safeHref } from '../../core/safeurl.js';
 import { DEFAULT_REPORT_PRESET, REPORT_PRESETS, REPORT_SECTIONS, presetRange, reportToText } from '../../domain/report.js';
 import { copyToClipboard } from '../kit/clipboard.js';
 import { button, dateInput, selectInput } from '../kit/controls.js';
@@ -115,7 +116,7 @@ function itemView(app, item) {
     h(
       'a',
       {
-        href: `#/relatorio?panel=${item.type}:${item.id}`,
+        href: safeHref(`#/relatorio?panel=${item.type}:${encodeURIComponent(item.id)}`),
         class: 'v-rel-item-link',
         title: 'Abrir',
         onclick: (ev) => {
@@ -217,7 +218,7 @@ export default {
           'a',
           {
             class: 'btn btn-default btn-sm v-rel-mail',
-            href: mail.href,
+            href: safeHref(mail.href),
             'data-action': 'mail',
             title: mail.truncated ? 'O texto é longo: o e-mail leva um resumo e o texto completo fica copiado' : 'Abrir no programa de e-mail',
             onclick: () => {

@@ -93,6 +93,7 @@ export function periodRange(state, today) {
 /** Cache pequeno (poucas chaves) dos cálculos por período: a tela pede o período e, às vezes, a semana dele. */
 const CACHE_SIZE = 6;
 const cache = new Map();
+let cacheApp = null; // por app: a versão do banco recomeça em outro app/banco
 
 function remember(key, compute) {
   if (cache.has(key)) {
@@ -165,6 +166,10 @@ export function computePeriod(app, { from, to, projectId = null, demandId = null
   const running = app.sel.activeTimers().some((entry) => timerState(entry) === TIMER.RUNNING);
   // Com cronômetro rodando, os totais mudam com o tempo: o cálculo é refeito a cada minuto.
   const key = [app.store.version(), from, to, projectId || '', demandId || '', running ? Math.floor(nowMs / 60000) : ''].join('|');
+  if (cacheApp !== app) {
+    cache.clear();
+    cacheApp = app;
+  }
   return remember(key, () => compute(app, { from, to, projectId, demandId, nowMs }));
 }
 

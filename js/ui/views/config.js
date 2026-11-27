@@ -6,6 +6,7 @@
 
 import { formatDateTime, formatRelativeTime } from '../../core/dates.js';
 import { cx, h } from '../../core/dom.js';
+import { trustedUrl } from '../../core/safeurl.js';
 import { SCHEMA_VERSION } from '../../data/schema.js';
 import { createSupabaseRemote } from '../../data/remote-supabase.js';
 import { CATEGORIES } from '../../domain/statuses.js';
@@ -817,7 +818,7 @@ function renderCapture() {
         'a',
         {
           class: 'btn btn-sm btn-default v-config-bookmarklet',
-          href: bookmarklet,
+          href: trustedUrl(bookmarklet), // gerado pelo app só com o endereço do app (nenhum dado do usuário)
           'data-field': 'bookmarklet',
           title: 'Arraste para a barra de favoritos',
           draggable: 'true',

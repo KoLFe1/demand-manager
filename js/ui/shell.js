@@ -986,6 +986,9 @@ export function startShell(app, root) {
   let viewReadPanel = false;
   let destroyed = false;
   const renders = { shell: 0, view: 0, panel: 0 };
+  /** Duração (ms) do último desenho de cada região (testes de volume/diagnóstico). */
+  const renderMs = { shell: 0, view: 0, panel: 0 };
+  const clockMs = () => (win.performance && typeof win.performance.now === 'function' ? win.performance.now() : Date.now());
   const dirty = { shell: false, view: false, panel: false };
   const ALL = { shell: true, view: true, panel: true };
   let frame = 0;
@@ -1023,7 +1026,9 @@ export function startShell(app, root) {
     try {
       if (todo.shell) {
         renders.shell += 1;
+        const t0 = clockMs();
         shellMount.update();
+        renderMs.shell = clockMs() - t0;
       }
       if (viewHost !== viewMountHost) {
         if (viewMount) viewMount.destroy();
@@ -1041,15 +1046,19 @@ export function startShell(app, root) {
         renders.view += 1;
         viewRendering = true;
         viewReadPanel = false;
+        const t0 = clockMs();
         try {
           viewReadClock = probeClock(() => viewMount.update());
         } finally {
           viewRendering = false;
+          renderMs.view = clockMs() - t0;
         }
       }
       if (todo.panel && panelMount) {
         renders.panel += 1;
+        const t0 = clockMs();
         panelReadClock = probeClock(() => panelMount.update());
+        renderMs.panel = clockMs() - t0;
       }
     } finally {
       flushing = false;
@@ -1240,6 +1249,9 @@ export function startShell(app, root) {
 
     /** Contadores de desenho por região (testes/diagnóstico). */
     __renders: renders,
+
+    /** Duração em ms do último desenho de cada região ({ shell, view, panel }; testes/diagnóstico). */
+    __renderMs: renderMs,
 
     /** Pede um novo desenho (no próximo quadro). */
     rerender() {

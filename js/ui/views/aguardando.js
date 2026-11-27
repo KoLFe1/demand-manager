@@ -49,12 +49,14 @@ function scopedBoard(app) {
   };
 }
 
+let badgeApp = null; // por app: a versão do banco recomeça em outro app/banco
 let badgeKey = '';
 let badgeValue = 0;
 /** Selo: cobranças vencidas ou para hoje — memorizado por versão do banco, dia e escopo (a casca chama a cada render). */
 export function aguardandoBadge(app) {
   const key = `${app.store.version()}|${app.clock.today()}|${scopeOf(app) || ''}`;
-  if (key !== badgeKey) {
+  if (key !== badgeKey || app !== badgeApp) {
+    badgeApp = app;
     badgeKey = key;
     badgeValue = scopedBoard(app).dueCount;
   }

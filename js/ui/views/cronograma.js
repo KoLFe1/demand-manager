@@ -27,10 +27,11 @@ const SCALES = Object.freeze(['day', 'week', 'month']);
 /** Última combinação (escala|janela) para a qual já rolamos até "hoje". */
 let scrolledKey = null;
 
-let cache = { key: null, value: null };
+// Cache por app (a chave usa a versão do banco, que recomeça em outro app/banco aberto na mesma página).
+let cache = { app: null, key: null, value: null };
 function modelOf(app, { projectId, showDone, showSubtasks }) {
   const key = [app.store.version(), app.clock.today(), projectId === null ? '*' : projectId, showDone ? 1 : 0, showSubtasks ? 1 : 0, app.settings.get('capacity.hoursPerDay')].join('|');
-  if (cache.key === key) return cache.value;
+  if (cache.app === app && cache.key === key) return cache.value;
   const n = Number(app.settings.get('capacity.hoursPerDay'));
   const value = buildGantt({
     tasks: app.sel.tasks(),
@@ -44,7 +45,7 @@ function modelOf(app, { projectId, showDone, showSubtasks }) {
     showDone,
     showSubtasks,
   });
-  cache = { key, value };
+  cache = { app, key, value };
   return value;
 }
 

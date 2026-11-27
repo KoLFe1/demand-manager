@@ -9,6 +9,7 @@
 // último resumo mostrado) e 'digest.notify' (notificação do sistema; só enquanto o app está aberto — sem push).
 
 import { h } from '../core/dom.js';
+import { safeHref } from '../core/safeurl.js';
 import { DIGEST_SECTIONS, digestHeadline, digestTitle, digestToText, weekPlanLines } from '../domain/digest.js';
 import { copyToClipboard } from './kit/clipboard.js';
 import { button, iconButton } from './kit/controls.js';
@@ -130,7 +131,7 @@ function renderBody(app, digest, close) {
         'a',
         {
           class: 'btn btn-default btn-sm',
-          href: mail.href,
+          href: safeHref(mail.href),
           'data-action': 'digest-mail',
           title: mail.truncated ? 'O texto é longo: o e-mail leva um resumo e o texto completo fica copiado' : 'Abrir no programa de e-mail',
           onclick: () => {

@@ -13,6 +13,8 @@
 // elemento, em `el.__h = { on: { onclick: fn, … } | null, ref: fn | null, props: máscara }`, para o morph
 // conseguir copiar de um nó para o outro. `el.__n` é só uma dica de desempenho (tamanho da subárvore).
 
+import { isUnsafeUrl, TrustedUrl } from './safeurl.js';
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
 const XML_NS = 'http://www.w3.org/XML/1998/namespace';
@@ -136,16 +138,25 @@ function booleanText(name, on) {
   return on ? '' : null;
 }
 
+/** Atributos que carregam um endereço: javascript:/data:/vbscript: nunca entram neles (ver safeurl.js). */
+const URL_ATTRS = new Set(['href', 'src', 'action', 'formaction', 'xlink:href', 'poster', 'background', 'cite', 'srcdoc']);
+
 function setAttr(el, name, value) {
   if (value == null) return;
   let text;
-  if (value === true || value === false) {
+  if (value instanceof TrustedUrl) {
+    text = value.url; // endereço gerado pelo próprio app (ex.: o favorito javascript:)
+  } else if (value === true || value === false) {
     text = booleanText(name, value);
     if (text === null) return;
   } else {
     const type = typeof value;
     if (type === 'function' || type === 'symbol') return;
     text = type === 'string' ? value : String(value);
+    if (URL_ATTRS.has(name.toLowerCase()) && (name.toLowerCase() === 'srcdoc' || isUnsafeUrl(text))) {
+      console.warn(`[dom] endereço recusado em ${name}`);
+      return;
+    }
   }
   if (name.charCodeAt(0) === 120 /* x */) {
     if (name.startsWith('xlink:')) {
@@ -304,8 +315,7 @@ function build(el, props, children) {
           if (typeof value === 'function') (rec || (rec = record(el))).ref = value;
           break;
         case 'html':
-          if (value != null && value !== false) el.innerHTML = String(value);
-          break;
+          break; // innerHTML não é aceito (proteção contra XSS): ícones e marcação são montados com h()/s()
         case 'value':
         case 'checked':
         case 'selected':
@@ -355,7 +365,10 @@ function build(el, props, children) {
  *     funcionam do mesmo jeito por um ouvinte interno;
  *   - `ref`: função(el) chamada logo após criar o elemento e de novo depois de cada mount/morph, sempre com
  *     o elemento vivo (na criação o elemento ainda está fora do documento);
- *   - `html`: string → innerHTML (SOMENTE marcação estática confiável, ex.: ícones);
+ *   - `html`: IGNORADO (innerHTML não é usado em lugar nenhum: todo texto vira nó de texto);
+ *   - `href`/`src`/`action`/`formaction`/`xlink:href`…: valores javascript:/data:/vbscript: (com truques de
+ *     maiúsculas, espaços e entidades) são recusados; endereços de dados devem passar por safeHref()
+ *     (core/safeurl.js). Exceção explícita: trustedUrl(…) para endereços gerados pelo próprio app;
  *   - `value` / `checked` / `selected` / `indeterminate`: propriedades do DOM. Basta a chave estar presente
  *     para o campo ser "controlado" (o morph passa a impor o valor); sem a chave, o que o usuário digitou
  *     é preservado. `value` funciona em input, textarea e select (array para seleção múltipla);
