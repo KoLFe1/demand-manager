@@ -11,11 +11,13 @@
 //   • só prazo + estimativa    → a barra ocupa N dias úteis terminando no prazo,
 //                                N = ceil(estimativa em horas ÷ horas por dia) (mínimo 1);
 //   • só prazo                 → marco (losango) no prazo;
-//   • só início planejado      → barra de um dia no início (sem término definido: `openEnd`).
+//   • só início + estimativa   → barra tracejada de N dias úteis COMEÇANDO no início (source 'estimate_end');
+//   • só início planejado      → marcador de início (kind 'start', sem término definido: `openEnd`).
+// Barras derivadas da estimativa são tracejadas; ESTIMATE_TITLES dá o texto da legenda/dica de cada caso.
 // Demanda: barra-resumo do menor início ao maior término das suas tarefas desenhadas; sem tarefas com data,
 // usa as datas da própria demanda (início planejado/prazo; só prazo → marco).
 
-import { addDays, diffDays, formatDate, isValidDateStr, isWeekend, MONTHS_SHORT, MONTHS, parseDate, startOfMonth, startOfWeek } from '../core/dates.js';
+import { addDays, addWorkdays, diffDays, formatDate, isValidDateStr, isWeekend, MONTHS_SHORT, MONTHS, parseDate, startOfMonth, startOfWeek } from '../core/dates.js';
 import { statusById } from './statuses.js';
 
 /** Pixels por dia de cada escala de zoom. */
@@ -24,6 +26,14 @@ export const GANTT_SCALES = Object.freeze({ day: 28, week: 8, month: 2.5 });
 export const GANTT_SCALE_LABELS = Object.freeze({ day: 'Dias', week: 'Semanas', month: 'Meses' });
 /** Limite de linhas desenhadas (desempenho, como nas outras telas). */
 export const GANTT_MAX_ROWS = 400;
+
+/** Textos (legenda e dica da barra) das barras tracejadas derivadas da estimativa, por `source`. */
+export const ESTIMATE_TITLES = Object.freeze({
+  estimate: 'Duração estimada (sem início planejado)',
+  estimate_end: 'Duração estimada (sem prazo)',
+});
+/** Texto do marcador de início (só início planejado, sem prazo nem estimativa). */
+export const START_MARKER_TITLE = 'Início planejado (sem prazo nem estimativa)';
 
 /** Valores especiais do escopo de projeto. */
 export const GANTT_ALL = null;
@@ -62,8 +72,24 @@ export function startFromEstimate(dueDate, estimateMinutes, hoursPerDay = 8) {
 }
 
 /**
+ * Término derivado da estimativa: N dias úteis começando no início planejado.
+ * @param {string} startDate
+ * @param {number} estimateMinutes
+ * @param {number} [hoursPerDay=8]
+ * @returns {string|null}
+ */
+export function endFromEstimate(startDate, estimateMinutes, hoursPerDay = 8) {
+  const start = valid(startDate);
+  const minutes = Number(estimateMinutes);
+  if (!start || !Number.isFinite(minutes) || minutes <= 0) return null;
+  const hours = Number(hoursPerDay) > 0 ? Number(hoursPerDay) : 8;
+  const days = Math.max(1, Math.ceil(minutes / 60 / hours));
+  return addWorkdays(start, days - 1);
+}
+
+/**
  * Forma de uma entidade no cronograma (sem considerar filhos).
- * @returns {{ kind: 'bar'|'milestone', start: string, end: string, source: string, openEnd?: boolean }|null}
+ * @returns {{ kind: 'bar'|'milestone'|'start', start: string, end: string, source: string, openEnd?: boolean }|null}
  */
 export function entitySpan(entity, { hoursPerDay = 8, useEstimate = true } = {}) {
   if (!entity) return null;
@@ -78,7 +104,13 @@ export function entitySpan(entity, { hoursPerDay = 8, useEstimate = true } = {})
     if (derived) return { kind: 'bar', start: derived <= due ? derived : due, end: due, source: 'estimate' };
     return { kind: 'milestone', start: due, end: due, source: 'due' };
   }
-  if (start) return { kind: 'bar', start, end: start, source: 'start', openEnd: true };
+  if (start) {
+    const derived = useEstimate ? endFromEstimate(start, entity.estimate_minutes, hoursPerDay) : null;
+    if (derived) return { kind: 'bar', start, end: derived >= start ? derived : start, source: 'estimate_end' };
+    // Demanda (sem estimativa): barra de um dia; tarefa: marcador de início.
+    if (!useEstimate) return { kind: 'bar', start, end: start, source: 'start', openEnd: true };
+    return { kind: 'start', start, end: start, source: 'start', openEnd: true };
+  }
   return null;
 }
 
@@ -330,4 +362,32 @@ export function ganttTicks(win, scale = 'week') {
     }
   }
   return { major, minor, width: total * px, pxPerDay: px };
+}
+
+/**
+ * Patch de datas ao arrastar uma barra de tarefa no cronograma (puro; o comando grava e audita).
+ *   mode 'move'   → planned_start e due_date andam juntos N dias (só os campos que existem);
+ *   mode 'resize' → borda direita: só due_date = término desenhado + N (nunca antes do início planejado).
+ * @param {{ entity: object, end: string }} row linha do modelo (buildGantt)
+ * @param {'move'|'resize'} mode
+ * @param {number} days deslocamento em dias corridos (inteiro; 0 = nada)
+ * @returns {object|null} { planned_start?, due_date? } ou null quando nada muda
+ */
+export function ganttDragPatch(row, mode, days) {
+  const n = Math.trunc(Number(days) || 0);
+  const task = row && row.entity;
+  if (!task || !n) return null;
+  const start = valid(task.planned_start);
+  const due = valid(task.due_date);
+  if (mode === 'resize') {
+    const end = valid(row.end) || due || start;
+    if (!end) return null;
+    let next = addDays(end, n);
+    if (start && next < start) next = start;
+    return next === due ? null : { due_date: next };
+  }
+  const patch = {};
+  if (start) patch.planned_start = addDays(start, n);
+  if (due) patch.due_date = addDays(due, n);
+  return Object.keys(patch).length ? patch : null;
 }

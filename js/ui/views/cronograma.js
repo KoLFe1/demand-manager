@@ -5,7 +5,11 @@
 //     (atrasadas com contorno vermelho), marcos (losango) para itens só com prazo, a barra-resumo de cada
 //     demanda e as setas de dependência (vermelhas quando há conflito de prazo);
 //   • barra de ferramentas: projeto (padrão = filtro global), zoom Dias/Semanas/Meses, "Mostrar concluídas"
-//     e "Subtarefas"; itens sem nenhuma data ficam na lista "Sem datas" abaixo do gráfico.
+//     e "Subtarefas"; itens sem nenhuma data ficam na lista "Sem datas" abaixo do gráfico;
+//   • legenda (planejada, durações estimadas tracejadas, marco, início planejado, demanda);
+//   • arrastar (mouse/caneta; desligado em ponteiro grosso/toque): a barra inteira move início e prazo juntos
+//     N dias; a borda direita muda só o prazo; teclado: barra focada + Shift+←/→ move 1 dia. Grava por
+//     app.cmd.updateTask (auditado) com aviso [Desfazer]; patch puro em ganttDragPatch (domain/gantt.js).
 //
 // Regras (puras) em js/domain/gantt.js. Estado da tela: { scale, showDone, showSubtasks, projectId }
 // (projectId ausente = segue o filtro global; '__all' = todos; '' = sem projeto; id = o projeto).
@@ -14,7 +18,8 @@ import { cx, h, s } from '../../core/dom.js';
 import { diffDays, formatDate } from '../../core/dates.js';
 import { plural } from '../../core/format.js';
 import { statusById } from '../../domain/statuses.js';
-import { GANTT_SCALE_LABELS, GANTT_SCALES, buildGantt, ganttTicks, ganttWindow } from '../../domain/gantt.js';
+import { ESTIMATE_TITLES, GANTT_SCALE_LABELS, GANTT_SCALES, START_MARKER_TITLE, buildGantt, ganttDragPatch, ganttTicks, ganttWindow } from '../../domain/gantt.js';
+import { handleError, notify } from '../shared/entity.js';
 import { button, segmented, switchInput } from '../kit/controls.js';
 import { emptyState } from '../kit/display.js';
 import { pickFromList } from '../kit/pickers.js';
@@ -23,6 +28,14 @@ const ROW_H = 32;
 const HEAD_H = 44;
 const ALL = '__all';
 const SCALES = Object.freeze(['day', 'week', 'month']);
+/** Largura (px) da alça de redimensionar na borda direita da barra. */
+const HANDLE_W = 6;
+/** Deslocamento mínimo (px) para o gesto virar arrasto (abaixo disso é clique). */
+const DRAG_SLOP = 4;
+
+/** Depois de um arrasto, o clique que o navegador dispara em seguida não abre o painel (nível de módulo:
+ *  o morph pode trocar o tratador entre o pointerup e o click). */
+let suppressClick = false;
 
 /** Última combinação (escala|janela) para a qual já rolamos até "hoje". */
 let scrolledKey = null;
@@ -81,9 +94,15 @@ const entityName = (e) => (e && typeof e.name === 'string' && e.name.trim()) || 
 function rowTitle(app, row) {
   const st = statusById(app.sel.statuses(), row.status);
   const today = app.clock.today();
-  const dates = row.kind === 'milestone' ? `Prazo: ${formatDate(row.end, 'short', today)}` : `${formatDate(row.start, 'short', today)} → ${formatDate(row.end, 'short', today)}`;
+  const dates =
+    row.kind === 'milestone'
+      ? `Prazo: ${formatDate(row.end, 'short', today)}`
+      : row.kind === 'start'
+        ? `Início: ${formatDate(row.start, 'short', today)}`
+        : `${formatDate(row.start, 'short', today)} → ${formatDate(row.end, 'short', today)}`;
   const extra = [];
-  if (row.source === 'estimate') extra.push('início estimado pela estimativa');
+  if (row.type === 'task' && ESTIMATE_TITLES[row.source]) extra.push(ESTIMATE_TITLES[row.source]);
+  if (row.kind === 'start') extra.push(START_MARKER_TITLE);
   if (row.overdue) extra.push('atrasada');
   if (row.conflict) extra.push('conflito de dependência');
   return `${app.sel.code(row.type, row.entity)} ${entityName(row.entity)} — ${st.label} · ${dates}${extra.length ? ` (${extra.join(', ')})` : ''}`;
@@ -159,6 +178,7 @@ export default {
     }
 
     const chart = model.rows.length ? renderChart(app, model, { scale, today, isMobile, open }) : null;
+    const legend = model.rows.length ? renderLegend() : null;
     const undated = model.undated.length
       ? h(
           'section',
@@ -188,11 +208,88 @@ export default {
       { class: cx('v-cronograma', isMobile && 'is-mobile'), 'data-scale': scale },
       toolbar,
       model.truncated ? h('div', { class: 'v-crono-note', role: 'status' }, `Mostrando as primeiras ${model.rows.length} de ${model.total} linhas. Filtre por projeto para ver o restante.`) : null,
+      legend,
       chart,
       undated,
     );
   },
 };
+
+/** Legenda das formas do cronograma. */
+function renderLegend() {
+  const swatch = (cls, shape) => s('svg', { class: 'v-crono-legend-swatch', width: 28, height: 14, viewBox: '0 0 28 14', 'aria-hidden': 'true' }, shape(cls));
+  const bar = (cls) => s('rect', { x: 1, y: 2, width: 26, height: 10, rx: 3, class: cx('v-crono-legend-bar', cls) });
+  const entries = [
+    { key: 'planned', label: 'Planejada (início → prazo)', icon: swatch('', bar) },
+    { key: 'estimate', label: ESTIMATE_TITLES.estimate, icon: swatch('is-estimated', bar) },
+    { key: 'estimate_end', label: ESTIMATE_TITLES.estimate_end, icon: swatch('is-estimated', bar) },
+    { key: 'milestone', label: 'Prazo (marco)', icon: swatch('', () => s('path', { d: 'M14,1 L20,7 L14,13 L8,7 Z', class: 'v-crono-legend-diamond' })) },
+    { key: 'start', label: 'Início planejado (sem prazo)', icon: swatch('', () => s('path', { d: 'M10,1 V13 M10,1 L18,4 L10,7 Z', class: 'v-crono-legend-start' })) },
+    { key: 'summary', label: 'Demanda (resumo)', icon: swatch('', () => s('rect', { x: 1, y: 4, width: 26, height: 6, rx: 2, class: 'v-crono-legend-summary' })) },
+  ];
+  return h(
+    'ul',
+    { class: 'v-crono-legend', 'aria-label': 'Legenda' },
+    entries.map((e) => h('li', { key: e.key, class: 'v-crono-legend-item', 'data-legend': e.key }, e.icon, h('span', null, e.label))),
+  );
+}
+
+/** Depois de mover pelo teclado, devolve o foco à barra (o morph pode ter recriado o nó). */
+function refocus(el, key) {
+  const root = el && el.ownerSVGElement ? el.ownerSVGElement : null;
+  queueMicrotask(() => {
+    const target = (root && root.querySelector(`.v-crono-item[data-entity="${key}"]`)) || el;
+    if (target && target.isConnected && typeof target.focus === 'function') target.focus({ preventScroll: true });
+  });
+}
+
+/** Ponteiro grosso (toque): sem arrasto, só toque para abrir o painel. */
+function coarsePointer() {
+  try {
+    return typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Grava o patch de arrasto (auditado por updateTask) e oferece [Desfazer].
+ * @param {object} app
+ * @param {object} row linha do modelo (tarefa)
+ * @param {'move'|'resize'} mode
+ * @param {number} days
+ * @returns {object|null} o patch gravado
+ */
+export function applyGanttDrag(app, row, mode, days) {
+  const patch = ganttDragPatch(row, mode, days);
+  if (!patch) return null;
+  const task = app.sel.task(row.id) || row.entity;
+  const before = {};
+  for (const k of Object.keys(patch)) before[k] = task[k] === undefined ? null : task[k];
+  try {
+    app.cmd.updateTask(task.id, patch);
+  } catch (err) {
+    handleError(app, err);
+    return null;
+  }
+  const n = Math.abs(days);
+  const what = mode === 'resize' ? `Prazo ${days > 0 ? 'adiado' : 'antecipado'}` : `Movida ${days > 0 ? 'para frente' : 'para trás'}`;
+  const today = app.clock.today();
+  const dateText = patch.due_date ? ` · prazo ${formatDate(patch.due_date, 'short', today)}` : patch.planned_start ? ` · início ${formatDate(patch.planned_start, 'short', today)}` : '';
+  notify(app, `${what} ${plural(n, 'dia', 'dias')}${dateText}`, {
+    action: {
+      label: 'Desfazer',
+      onclick: () => {
+        try {
+          app.cmd.updateTask(task.id, before);
+        } catch (err) {
+          handleError(app, err);
+        }
+      },
+    },
+  });
+  return patch;
+}
 
 function renderChart(app, model, { scale, today, isMobile, open }) {
   const px = GANTT_SCALES[scale];
@@ -265,10 +362,64 @@ function renderChart(app, model, { scale, today, isMobile, open }) {
     );
   });
 
+  // Arrastar: só tarefas desenhadas como barra/início, com mouse/caneta (ponteiro grosso = só abrir o painel).
+  const coarse = coarsePointer();
+  const canDrag = (r) => !coarse && r.type === 'task' && (r.kind === 'bar' || r.kind === 'start');
+  const startDrag = (r, ev) => {
+    if (ev.button !== 0 || !canDrag(r)) return;
+    const el = ev.currentTarget;
+    const mode = ev.target && ev.target.closest && ev.target.closest('.v-crono-handle') ? 'resize' : 'move';
+    const x0 = ev.clientX;
+    let days = 0;
+    let dragging = false;
+    try {
+      el.setPointerCapture(ev.pointerId);
+    } catch {
+      /* evento sintético sem ponteiro ativo */
+    }
+    const rect = el.querySelector('.v-crono-bar');
+    const baseW = rect ? Number(rect.getAttribute('data-w')) || Number(rect.getAttribute('width')) : 0;
+    const restore = () => {
+      el.classList.remove('is-dragging');
+      el.removeAttribute('transform');
+      if (rect && baseW) rect.setAttribute('width', String(baseW));
+    };
+    const move = (e) => {
+      const dx = e.clientX - x0;
+      if (!dragging && Math.abs(dx) < DRAG_SLOP) return;
+      dragging = true;
+      days = Math.round(dx / px);
+      el.classList.add('is-dragging');
+      if (mode === 'move') el.setAttribute('transform', `translate(${days * px},0)`);
+      else if (rect) rect.setAttribute('width', String(Math.max(px, baseW + days * px)));
+    };
+    const finish = (commit) => {
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerup', onUp);
+      el.removeEventListener('pointercancel', onCancel);
+      restore();
+      if (!dragging) return;
+      suppressClick = true;
+      setTimeout(() => {
+        suppressClick = false;
+      }, 0);
+      if (commit && days) applyGanttDrag(app, r, mode, days);
+    };
+    const onUp = (e) => {
+      move(e);
+      finish(true);
+    };
+    const onCancel = () => finish(false);
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointercancel', onCancel);
+  };
+
   // Barras.
   const bars = model.rows.map((r, i) => {
     const color = statusById(statuses, r.status).color || 'gray';
     const y = midY(i);
+    const draggable = canDrag(r);
     const common = {
       key: r.key,
       class: cx('v-crono-item', `is-${r.kind}`, `st-${color}`, r.type === 'demand' && 'is-demand', r.overdue && 'is-overdue', r.conflict && 'is-conflict', (r.category === 'done' || r.category === 'cancelled') && 'is-closed'),
@@ -276,11 +427,19 @@ function renderChart(app, model, { scale, today, isMobile, open }) {
       tabindex: '0',
       role: 'button',
       'aria-label': rowTitle(app, r),
-      onclick: () => open(r.type, r.id),
+      'data-draggable': draggable ? 'true' : null,
+      onclick: () => {
+        if (suppressClick) return;
+        open(r.type, r.id);
+      },
+      onpointerdown: draggable ? (ev) => startDrag(r, ev) : null,
       onkeydown: (ev) => {
         if (ev.key === 'Enter' || ev.key === ' ') {
           ev.preventDefault();
           open(r.type, r.id);
+        } else if (ev.shiftKey && (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') && r.type === 'task' && (r.kind === 'bar' || r.kind === 'start')) {
+          ev.preventDefault();
+          if (applyGanttDrag(app, r, 'move', ev.key === 'ArrowRight' ? 1 : -1)) refocus(ev.currentTarget, r.key);
         }
       },
     };
@@ -289,6 +448,16 @@ function renderChart(app, model, { scale, today, isMobile, open }) {
       const cx0 = X(r.end) + px / 2;
       const k = 7;
       return s('g', common, title, s('path', { d: `M${cx0},${y - k} L${cx0 + k},${y} L${cx0},${y + k} L${cx0 - k},${y} Z`, class: 'v-crono-diamond' }));
+    }
+    if (r.kind === 'start') {
+      const x0 = X(r.start) + 1;
+      return s(
+        'g',
+        common,
+        title,
+        s('rect', { x: x0 - 2, y: y - 10, width: Math.max(14, px), height: 20, class: 'v-crono-hit' }),
+        s('path', { d: `M${x0},${y - 9} V${y + 9} M${x0},${y - 9} L${x0 + 10},${y - 5} L${x0},${y - 1} Z`, class: 'v-crono-start-marker' }),
+      );
     }
     const g = barGeom(r);
     if (r.kind === 'summary') {
@@ -305,8 +474,9 @@ function renderChart(app, model, { scale, today, isMobile, open }) {
       'g',
       common,
       title,
-      s('rect', { x: g.x, y: y - 9, width: g.w, height: 18, rx: 4, class: cx('v-crono-bar', r.source === 'estimate' && 'is-estimated', r.openEnd && 'is-open-end') }),
+      s('rect', { x: g.x, y: y - 9, width: g.w, height: 18, rx: 4, 'data-w': String(g.w), 'data-source': r.source, class: cx('v-crono-bar', ESTIMATE_TITLES[r.source] && 'is-estimated', r.openEnd && 'is-open-end') }),
       label,
+      draggable && g.w >= 12 ? s('rect', { x: g.x2 - HANDLE_W, y: y - 9, width: HANDLE_W, height: 18, class: 'v-crono-handle' }, s('title', null, 'Arraste para mudar o prazo')) : null,
     );
   });
 

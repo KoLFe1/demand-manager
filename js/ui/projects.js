@@ -10,6 +10,7 @@ import { cx, h } from '../core/dom.js';
 import { button, field, textArea, textInput } from './kit/controls.js';
 import { icon } from './kit/icons.js';
 import { confirmDialog, openMenu, openModal, toast } from './kit/overlays.js';
+import { linksSection } from './panels/links-section.js';
 
 /** Cores disponíveis para projetos (nomes dos tons de status em css/tokens.css). */
 export const PROJECT_COLORS = Object.freeze([
@@ -74,6 +75,16 @@ export function openProjectDialog(app, projectId = null, defaults = {}) {
   let error = '';
   let dialog = null;
   let result = null;
+  // Links e arquivos (só ao editar: o projeto precisa existir). Ex.: pasta-raiz \servidor\Projetos\Palito.
+  const linkState = { linkError: null };
+  const linkCtx = {
+    state: linkState,
+    setState: (patch) => {
+      Object.assign(linkState, patch);
+      if (dialog) dialog.update();
+    },
+  };
+  const unsubscribe = existing && app.store && typeof app.store.subscribe === 'function' ? app.store.subscribe(() => dialog && dialog.update()) : null;
 
   const submit = (close) => {
     const name = form.name.trim();
@@ -102,7 +113,7 @@ export function openProjectDialog(app, projectId = null, defaults = {}) {
   return new Promise((resolve) => {
     dialog = openModal({
       title: existing ? 'Editar projeto' : 'Novo projeto',
-      size: 'sm',
+      size: existing ? 'md' : 'sm',
       class: 'project-dialog',
       render: (close) =>
         h(
@@ -182,12 +193,16 @@ export function openProjectDialog(app, projectId = null, defaults = {}) {
               onsubmit: () => submit(close),
             }),
           ),
+          existing ? linksSection(app, 'project', existing.id, linkCtx) : null,
         ),
       actions: [
         { label: 'Cancelar', onclick: (close) => close(null) },
         { label: existing ? 'Salvar' : 'Criar projeto', variant: 'primary', onclick: (close) => submit(close) },
       ],
-      onclose: () => resolve(result),
+      onclose: () => {
+        if (unsubscribe) unsubscribe();
+        resolve(result);
+      },
     });
   });
 }

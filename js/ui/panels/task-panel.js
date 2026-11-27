@@ -12,7 +12,7 @@ import { cx, h } from '../../core/dom.js';
 import { formatDate, formatDateTime, formatTime, isoToDateStr } from '../../core/dates.js';
 import { plural } from '../../core/format.js';
 import { validateNewDependency } from '../../domain/dependencies.js';
-import { describeEvent, groupByDay } from '../../domain/history.js';
+import { dedupeCreated, describeEvent, groupByDay } from '../../domain/history.js';
 import { isCountable } from '../../domain/progress.js';
 import { RECURRENCE_OPTIONS, describeRecurrence, parseRecurrence } from '../../domain/recurrence.js';
 import { isClosedCategory } from '../../domain/statuses.js';
@@ -471,7 +471,8 @@ function dayLabel(date, today) {
  * @returns {HTMLElement}
  */
 export function historyTab(app, type, id, { state, setState }) {
-  const events = app.sel.history(type, id);
+  // 'created' repetido (dois aparelhos criando a mesma ocorrência) aparece uma vez só: o mais antigo.
+  const events = dedupeCreated(app.sel.history(type, id));
   if (!events.length) return h('div', { class: 'pn-tab pn-history', key: 'history' }, emptyState({ icon: 'clock', title: 'Sem histórico', text: 'As alterações aparecem aqui.', compact: true }));
   const today = app.clock.today();
   const ctx = { statuses: app.sel.statuses(), tasksById: app.sel.tasksById(), demandsById: app.sel.demandsById(), projectsById: app.sel.projectsById(), today };
@@ -1141,7 +1142,7 @@ function renderTask(app, id, ctx) {
   const closed = isClosedCategory(status.category);
   const tab = TASK_TABS.includes(pctx.state.tab) ? pctx.state.tab : 'details';
   const entries = app.sel.entriesOfTask(task.id);
-  const history = app.sel.history('task', task.id);
+  const history = dedupeCreated(app.sel.history('task', task.id));
   const code = app.sel.code('task', task);
   const parent = app.sel.parentOf(task);
   const flags = entityFlags(app, 'task', task, { hideNoDemand: true });

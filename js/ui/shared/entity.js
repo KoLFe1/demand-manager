@@ -242,7 +242,7 @@ export function surfaceOutcome(app, outcome, context = {}) {
   }
   for (const next of Array.isArray(outcome.nextOccurrences) ? outcome.nextOccurrences : []) {
     if (!next || !hasId(next.id)) continue;
-    notify(app, `Próxima ocorrência criada para ${formatDate(next.due_date, 'short')}`, {
+    notify(app, `Próxima ocorrência ${next.restored ? 'restaurada' : 'criada'} para ${formatDate(next.due_date, 'short')}`, {
       tone: 'success',
       duration: 8000,
       id: `recurrence:${next.id}`,
@@ -558,7 +558,12 @@ export const entityActions = Object.freeze({
     const row = attempt(app, () => app.cmd.logFollowUp(type, id, options));
     if (!row) return null;
     const next = row.follow_up_date;
-    notify(app, next ? `Cobrança registrada. Próxima cobrança: ${formatDate(next, 'short', app.clock.today())}` : 'Cobrança registrada', { tone: 'success' });
+    notify(app, next ? `Cobrança registrada. Próxima cobrança: ${formatDate(next, 'short', app.clock.today())}` : 'Cobrança registrada', {
+      tone: 'success',
+      duration: next ? 8000 : undefined,
+      // [Alterar data]: abre o calendário do "Cobrar em" (centralizado: o aviso some ao clicar).
+      action: next ? { label: 'Alterar data', onclick: () => entityActions.pickDueDate(app, type, id, null, { field: 'follow_up_date' }) } : undefined,
+    });
     return row;
   },
 

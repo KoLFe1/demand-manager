@@ -623,8 +623,10 @@ export function createCommands(app) {
   /**
    * Tarefa recorrente concluída → cria a próxima ocorrência (com as subtarefas). O id é DERIVADO do id da
    * tarefa + novo prazo: dois aparelhos criam a mesma linha (o merge junta) e reabrir + concluir de novo não
-   * duplica (se a linha já existe — mesmo excluída pelo "Desfazer" —, nada é criado).
-   * @returns {{ id: string, from: string, due_date: string }|null}
+   * duplica (linha viva já existente → nada é criado). Se a linha existe mas foi EXCLUÍDA (ex.: "Desfazer"),
+   * ela é restaurada (deleted_at = null) com campos e datas recalculados — mesmo id, auditado como 'restored'
+   * com meta.recurrence.
+   * @returns {{ id: string, from: string, due_date: string, restored?: boolean }|null}
    */
   function createNextOccurrence(task) {
     const rule = carriedRecurrence(task.recurrence, { dueDate: task.due_date, completedDate: isoToDateStr(now) });
@@ -634,15 +636,15 @@ export function createCommands(app) {
     const dueDate = nextOccurrenceFrom(rule, { ...ctx, today: isoToDateStr(now) });
     if (!dueDate) return null;
     const id = derivedUuid(task.id, dueDate);
-    if (store.get('tasks', id)) return null;
+    const existing = store.get('tasks', id);
+    if (existing && !existing.deleted_at) return null;
     const delta = diffDays(occurrenceBase(rule, ctx), dueDate);
     const shift = (date) => (isValidDateStr(date) ? addDays(date, delta) : null);
     const parent = isSubtask(task) ? liveGet('tasks', task.parent_id) : null;
     const demand = demandOfTask(task);
     const demandId = demand ? demand.id : null;
     const siblings = parent ? subtasksOf(parent.id) : topTasksOf(demandId);
-    const copy = insertTask(
-      {
+    const values = {
         ...pick(task, RECURRING_COPY_FIELDS),
         id,
         name: task.name,
@@ -656,14 +658,15 @@ export function createCommands(app) {
         planned_start: shift(task.planned_start),
         recurrence: rule,
         sort_order: orderValue('tasks', siblings, null, { afterId: task.id }),
-      },
-      { recurrence: { from: task.id } },
-    );
+    };
+    const meta = { recurrence: { from: task.id } };
+    const copy = existing ? restoreOccurrence(existing, values, { recurrence: { from: task.id, restored: true } }) : insertTask(values, meta);
     if (!parent) {
       for (const sub of subtasksOf(task.id).filter((s) => !s.archived_at).sort(bySortOrder)) {
         const subId = derivedUuid(copy.id, sub.id);
-        if (store.get('tasks', subId)) continue;
-        insertTask({
+        const subRow = store.get('tasks', subId);
+        if (subRow && !subRow.deleted_at) continue;
+        (subRow ? (v) => restoreOccurrence(subRow, v, { recurrence: { from: sub.id, restored: true } }) : insertTask)({
           ...pick(sub, RECURRING_COPY_FIELDS),
           id: subId,
           name: sub.name,
@@ -679,7 +682,33 @@ export function createCommands(app) {
         });
       }
     }
-    return { id: copy.id, from: task.id, due_date: dueDate };
+    return existing ? { id: copy.id, from: task.id, due_date: dueDate, restored: true } : { id: copy.id, from: task.id, due_date: dueDate };
+  }
+
+  /**
+   * Restaura uma ocorrência derivada que estava excluída: grava os valores recalculados (só os que mudaram),
+   * zera conclusão/arquivamento/"Cobrar em" e audita ('restored' + campos alterados) com `meta`.
+   */
+  function restoreOccurrence(row, values, meta) {
+    const list = statuses();
+    const category = categoryOf(list, values.status);
+    const target = {
+      ...values,
+      archived_at: null,
+      follow_up_date: null,
+      completed_at: category === 'done' ? now : null,
+      actual_start: isInFlightCategory(category) || category === 'done' ? row.actual_start || now : null,
+      deleted_at: null,
+    };
+    delete target.id;
+    const patch = {};
+    for (const [key, value] of Object.entries(target)) {
+      if (!sameValue(row[key], value)) patch[key] = value;
+    }
+    patch.deleted_at = null;
+    const updated = store.update('tasks', row.id, patch);
+    auditDiff('task', row, patch, meta);
+    return updated;
   }
 
   function demandStatusEffects(demand, tr, result, list) {

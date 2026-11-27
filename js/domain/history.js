@@ -667,6 +667,34 @@ export function describeEvent(event, ctx = {}) {
 }
 
 /**
+ * Só para EXIBIÇÃO: remove eventos 'created' repetidos da mesma entidade (ex.: dois aparelhos criaram a mesma
+ * ocorrência recorrente, de id derivado), mantendo o mais antigo (menor instante; empate → menor id). A ordem
+ * da lista é preservada e ela não é alterada. Métricas continuam usando o histórico completo.
+ * @param {object[]} events
+ * @returns {object[]} a própria lista quando não há repetição
+ */
+export function dedupeCreated(events) {
+  const list = Array.isArray(events) ? events : [...(events || [])];
+  const oldest = new Map();
+  let repeated = false;
+  for (const ev of list) {
+    if (!ev || ev.action !== ACTIONS.CREATED) continue;
+    const key = `${ev.entity_type}:${ev.entity_id}`;
+    const cur = oldest.get(key);
+    if (!cur) {
+      oldest.set(key, ev);
+      continue;
+    }
+    repeated = true;
+    const a = String(ev.at || '');
+    const b = String(cur.at || '');
+    if (a < b || (a === b && String(ev.id) < String(cur.id))) oldest.set(key, ev);
+  }
+  if (!repeated) return list;
+  return list.filter((ev) => !ev || ev.action !== ACTIONS.CREATED || oldest.get(`${ev.entity_type}:${ev.entity_id}`) === ev);
+}
+
+/**
  * Agrupa eventos por dia (data LOCAL de cada evento) para a linha do tempo.
  * @param {object[]} events eventos em qualquer ordem (a lista não é alterada)
  * @returns {Array<{date: string|null, events: object[]}>} dias do mais novo para o mais antigo e, dentro de cada dia,

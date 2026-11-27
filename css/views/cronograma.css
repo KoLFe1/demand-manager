@@ -373,3 +373,85 @@
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+
+/* Legenda (C19). */
+.v-crono-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-4);
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.v-crono-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.v-crono-legend-swatch {
+  flex: none;
+}
+
+.v-crono-legend-bar {
+  fill: var(--bg-subtle);
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+}
+
+.v-crono-legend-bar.is-estimated {
+  stroke-dasharray: 5 3;
+}
+
+.v-crono-legend-diamond,
+.v-crono-legend-start {
+  fill: var(--text-muted);
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+}
+
+.v-crono-legend-summary {
+  fill: var(--text-muted);
+}
+
+/* Marcador de início (só início planejado). */
+.v-crono-start-marker {
+  fill: var(--tone);
+  stroke: var(--tone);
+  stroke-width: 1.5;
+}
+
+.v-crono-hit {
+  fill: transparent;
+}
+
+/* Arrastar barras (mouse/caneta). */
+.v-crono-item[data-draggable="true"] {
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.v-crono-item.is-dragging {
+  cursor: grabbing;
+  opacity: 0.85;
+}
+
+.v-crono-handle {
+  fill: transparent;
+  cursor: ew-resize;
+}
+
+.v-crono-item[data-draggable="true"]:hover .v-crono-handle,
+.v-crono-item[data-draggable="true"]:focus-visible .v-crono-handle {
+  fill: var(--tone);
+  opacity: 0.35;
+}
+
+@media print {
+  .v-crono-handle {
+    display: none;
+  }
+}

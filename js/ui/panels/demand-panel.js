@@ -8,6 +8,7 @@
 import { cx, h } from '../../core/dom.js';
 import { formatDateTime } from '../../core/dates.js';
 import { plural } from '../../core/format.js';
+import { dedupeCreated } from '../../domain/history.js';
 import { isCountable, isWeightDefined } from '../../domain/progress.js';
 import { isClosedCategory } from '../../domain/statuses.js';
 import { formatDuration } from '../../domain/timetracking.js';
@@ -322,7 +323,7 @@ function renderDemand(app, id, ctx) {
   const tab = DEMAND_TABS.includes(pctx.state.tab) ? pctx.state.tab : 'details';
   const code = app.sel.code('demand', demand);
   const taskCount = app.sel.topTasks(demand.id).length;
-  const history = app.sel.history('demand', demand.id);
+  const history = dedupeCreated(app.sel.history('demand', demand.id));
   const alerts = [archivedAlert(app, 'demand', demand), closed ? null : impedimentAlert(app, 'demand', demand)].filter(Boolean);
 
   return h(
