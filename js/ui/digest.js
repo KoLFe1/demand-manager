@@ -194,10 +194,25 @@ export async function showDigestNotification(app, digest, win = globalThis) {
   }
 }
 
+/** O foco está num campo de texto (ex.: editando um painel)? O resumo automático não rouba o foco: espera. */
+function isTyping() {
+  try {
+    const el = typeof document !== 'undefined' ? document.activeElement : null;
+    if (!el || el === document.body) return false;
+    if (el.isContentEditable) return true;
+    const tag = el.tagName;
+    if (tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    if (tag !== 'INPUT') return false;
+    return !/^(button|checkbox|radio|range|color|file|submit|reset|image|hidden)$/i.test(el.type || 'text');
+  } catch {
+    return false;
+  }
+}
+
 /**
  * 1º acesso do dia neste dispositivo: abre o resumo (pref. 'digest.enabled') e/ou mostra a notificação
- * (pref. 'digest.notify'). Não mostra quando o resumo está vazio nem quando já há outro diálogo aberto (tenta
- * de novo na próxima vez). Marca 'digest.lastShown' = hoje só quando mostrou.
+ * (pref. 'digest.notify'). Não mostra quando o resumo está vazio, quando já há outro diálogo aberto nem com o
+ * foco num campo de texto (tenta de novo na próxima vez: minuto seguinte ou volta ao app). Marca 'digest.lastShown' = hoje só quando mostrou.
  * @param {object} app
  * @returns {boolean} true quando mostrou
  */
@@ -210,7 +225,7 @@ export function checkDailyDigest(app) {
     if (app.prefs.get(DIGEST_PREF_LAST, null) === today) return false;
     const digest = app.sel.dailyDigest();
     if (digest.isEmpty) return false;
-    if (modal && (openEntry || isOverlayOpen())) return false;
+    if (modal && (openEntry || isOverlayOpen() || isTyping())) return false;
     app.prefs.set(DIGEST_PREF_LAST, today);
     if (modal) openDigestModal(app);
     if (notifyOn) showDigestNotification(app, digest);

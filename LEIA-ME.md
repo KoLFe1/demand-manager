@@ -56,15 +56,15 @@ Repita os passos 5 e 6 em cada dispositivo (com a mesma conta). Alternativa: pre
   prazo num e a prioridade no outro preserva as duas).
 - Trocar de conta exige recarregar a página: cada conta tem seu próprio banco local, e o app não envia
   nem recebe nada enquanto a conta conectada não for a dona dos dados abertos.
-- "Banco do servidor desatualizado" significa que o app foi atualizado: execute `supabase/schema.sql`
-  de novo (passo 2).
+- "Atualize o banco do Supabase" significa que o app foi atualizado e o banco ainda não: execute
+  `supabase/schema.sql` de novo (passo 2). Até lá o app funciona normalmente neste aparelho e nada se perde.
 
 ### Atualizar o banco para a v001 (versão 3 do banco)
 
 A v001 do app precisa do banco na **versão 3** (tarefas recorrentes, data de cobrança e links). Rode
 `supabase/schema.sql` **inteiro de novo** no SQL Editor (passo 2): nada é apagado e o resultado deve
-mostrar `banco pronto (versão 3)`. Enquanto isso não for feito, o app avisa "Banco do servidor
-desatualizado" e não sincroniza (os dados continuam salvos no aparelho).
+mostrar `banco pronto (versão 3)`. Enquanto isso não for feito, o app avisa "Atualize o banco do
+Supabase" e não sincroniza (os dados continuam salvos no aparelho).
 
 ## 3. Usar no celular
 

@@ -164,7 +164,7 @@ export function syncSummary(app, { online } = {}) {
     case 'error':
       return { ...base, state, label: 'Erro na sincronização', icon: 'alert-triangle', tone: 'danger', description: 'A última tentativa de sincronizar falhou. Nada foi perdido: as alterações continuam guardadas neste dispositivo.' };
     case 'schema-outdated':
-      return { ...base, state, label: 'Banco do servidor desatualizado', icon: 'alert-circle', tone: 'danger', description: 'O banco do Supabase precisa ser atualizado: execute o arquivo supabase/schema.sql inteiro no SQL Editor do Supabase.' };
+      return { ...base, state, label: 'Atualize o banco do Supabase', icon: 'alert-circle', tone: 'danger', description: 'A sincronização está pausada porque o banco do Supabase é de uma versão anterior do app. Continue usando normalmente: nada é perdido — as alterações ficam guardadas neste dispositivo e são enviadas depois da atualização.' };
     default:
       return {
         ...base,

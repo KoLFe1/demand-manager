@@ -225,7 +225,7 @@ export function buildStatusReport(input = {}) {
       const since = waitingSince(row, events, { statuses, nowIso, mode: 'waiting' });
       const days = daysSince(since, today);
       const reason = String((category === 'blocked' ? row.blocked_reason : row.waiting_on) || '').trim();
-      const head = `${category === 'blocked' ? 'Bloqueada' : 'Aguardando'} há ${daysWord(days)}`;
+      const head = `${category === 'blocked' ? 'Bloqueada' : 'Aguardando'} ${days > 0 ? `há ${daysWord(days)}` : 'desde hoje'}`;
       const detail = reason ? `${head} — ${reason}` : head;
       push('blocked', type, row, makeItem(type, row, detail, { category, days, reason, since }));
     }

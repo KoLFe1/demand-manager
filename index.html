@@ -81,7 +81,12 @@
         '<div class="boot-error-actions" style="gap:8px;flex-wrap:wrap"><button type="button" class="btn">Limpar cache e recarregar</button>' +
         '<button type="button" class="btn btn-primary">Recarregar</button></div></div>';
       box.querySelector('.boot-error-title').textContent = loadError ? 'Não foi possível carregar o Demand Manager' : 'Está demorando mais que o normal…';
-      box.querySelector('.boot-error-hint').textContent = loadError
+      var offline = false;
+      try { offline = navigator.onLine === false; } catch (e) { /* sem navigator.onLine */ }
+      if (loadError && offline) box.setAttribute('data-offline', '');
+      box.querySelector('.boot-error-hint').textContent = loadError && offline
+        ? 'Sem conexão e a versão nova ainda não foi baixada — abra de novo com internet.'
+        : loadError
         ? 'Um arquivo do aplicativo falhou ao carregar (talvez uma atualização pela metade ou falta de conexão).'
         : 'O Demand Manager ainda está abrindo — esta tela some sozinha quando terminar. Se não sair daqui, recarregue; ' +
           'se continuar, limpe o cache do aplicativo (seus dados não são apagados).';
